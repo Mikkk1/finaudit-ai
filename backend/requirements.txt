@@ -7,4 +7,3 @@ python-jose
 passlib[bcrypt]
 elasticsearch
 python-dotenv
-dotenv
