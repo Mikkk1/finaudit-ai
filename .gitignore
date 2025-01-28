@@ -1,0 +1,3 @@
+# filepath: /d:/PycharmProjects/finaudit-ai/.gitignore
+node_modules/
+backend/venv/

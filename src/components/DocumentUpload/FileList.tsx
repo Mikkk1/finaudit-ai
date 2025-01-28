@@ -1,19 +1,19 @@
-import React from 'react';
-import { File, Trash2, Eye } from 'lucide-react';
-import { UploadedFile } from '../../types/documentUpload.ts';
+import type React from "react"
+import { File, Trash2, Eye } from "lucide-react"
+import type { UploadedFile } from "../../types/documentUpload"
 
 interface FileListProps {
-  files: UploadedFile[];
-  onPreview: (file: UploadedFile) => void;
-  onMetadataChange: (fileId: string, metadata: Record<string, string>) => void;
+  files: UploadedFile[]
+  onPreview: (file: UploadedFile) => void
+  onDelete: (fileId: string) => void
 }
 
-const FileList: React.FC<FileListProps> = ({ files, onPreview, onMetadataChange }) => {
+const FileList: React.FC<FileListProps> = ({ files, onPreview, onDelete }) => {
   return (
     <div className="mt-8">
       <h2 className="text-xl font-semibold text-navy-blue mb-4">Uploaded Files</h2>
       <ul className="space-y-4">
-        {files.map(file => (
+        {files.map((file) => (
           <li key={file.id} className="bg-hover-state rounded-lg p-4 flex items-center justify-between">
             <div className="flex items-center">
               <File className="text-slate-gray mr-3" size={24} />
@@ -30,10 +30,7 @@ const FileList: React.FC<FileListProps> = ({ files, onPreview, onMetadataChange 
                 <Eye size={20} />
               </button>
               <button
-                onClick={() => {
-                  // Implement delete functionality
-                  console.log('Delete file:', file.id);
-                }}
+                onClick={() => onDelete(file.id)}
                 className="p-2 text-slate-gray hover:text-error-red transition-colors duration-200"
               >
                 <Trash2 size={20} />
@@ -43,8 +40,8 @@ const FileList: React.FC<FileListProps> = ({ files, onPreview, onMetadataChange 
         ))}
       </ul>
     </div>
-  );
-};
+  )
+}
 
-export default FileList;
+export default FileList
 

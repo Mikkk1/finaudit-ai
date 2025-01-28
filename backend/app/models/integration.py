@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
+
 class Integration(Base):
     __tablename__ = "integrations"
 
@@ -15,6 +16,7 @@ class Integration(Base):
 
     # Relationships
     company = relationship("Company", back_populates="integrations")
+
 
 class Notification(Base):
     __tablename__ = "notifications"
