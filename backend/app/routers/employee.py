@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.schemas.employee import EmployeeCreate, Employee
-from app.models.employee import Employee as EmployeeModel
+from app.models import Employee as EmployeeModel
 
 # In `app/routers/employee.py`
 router = APIRouter(

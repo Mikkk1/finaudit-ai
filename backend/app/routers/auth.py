@@ -1,100 +1,175 @@
-from fastapi import APIRouter, Depends, status, HTTPException
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from passlib.context import CryptContext
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from jose import jwt, JWTError
-from datetime import timedelta, datetime, timezone
-from typing import Annotated
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
+from jose import JWTError, jwt
+import bcrypt
+from datetime import datetime, timedelta
+from typing import Optional
+from pydantic import BaseModel
+import logging
 
-from app.models.users import User
-from app.database import SessionLocal
+from app.database import get_db
+from app.models import User, UserRole
 
-router = APIRouter(
-    prefix='/auth',
-    tags=['auth']
-)
+router = APIRouter()
 
-SECRET_KEY = 'f870a71be7b4ed871196f6c63270be8d4851d8f2472c55503cdbf9c01ec0d968'
-ALGORITHM = 'HS256'
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
+# to get a string like this run:
+# openssl rand -hex 32
+SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-
-class CreateUserRequest(BaseModel):
-    username: str
-    password: str
-    email: str
-    f_name: str
-    l_name: str
-    role: str
-    phone_number: str
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+class TokenData(BaseModel):
+    username: Optional[str] = None
+    user_id: Optional[int] = None
+    company_id: Optional[int] = None
 
-def get_db():
-    db = SessionLocal()
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+    role: UserRole
+    f_name: str
+    l_name: str
+    phone_number: Optional[str] = None
+    company_id: int
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        yield db
-    finally:
-        db.close()
-
-
-def authenticate_user(username: str, password: str, db: Session):
-    user = db.query(User).filter(User.username == username).first()
-    if not user:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except ValueError as e:
+        logger.error(f"Error verifying password: {str(e)}")
         return False
-    if not bcrypt_context.verify(password, user.hashed_password):
-        return False
-    return user
 
+def get_password_hash(password: str) -> str:
+    try:
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    except ValueError as e:
+        logger.error(f"Error hashing password: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing password")
 
-def create_access_token(username: str, user_id: int, role: str, expires_delta: timedelta):
-    encode = {'sub': username, 'id': user_id, 'role': role}
-    expires = datetime.now(timezone.utc) + expires_delta
-    encode.update({'exp': expires})
-    return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
+def authenticate_user(db: Session, username: str, password: str):
+    try:
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
+            return False
+        if not verify_password(password, user.hashed_password):
+            return False
+        return user
+    except SQLAlchemyError as e:
+        logger.error(f"Database error during authentication: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    try:
+        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        return encoded_jwt
+    except JWTError as e:
+        logger.error(f"Error creating access token: {str(e)}")
+        raise HTTPException(status_code=500, detail="Could not create access token")
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get('sub')
-        user_id: int = payload.get('id')
-        user_role: str = payload.get('role')
-        if username is None or user_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not Validate user.')
-        return {'username': username, 'id': user_id, 'user_role': user_role}
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not Validate user.')
-
-
-@router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_user(create_user_request: CreateUserRequest, db: Annotated[Session, Depends(get_db)]):
-    create_user_model = User(
-        username=create_user_request.username,
-        hashed_password=bcrypt_context.hash(create_user_request.password),
-        email=create_user_request.email,
-        f_name=create_user_request.f_name,
-        l_name=create_user_request.l_name,
-        role=create_user_request.role,
-        is_active=True,
-        phone_number=create_user_request.phone_number
-    )
-    db.add(create_user_model)
-    db.commit()
-
+        username: str = payload.get("sub")
+        user_id: int = payload.get("user_id")
+        company_id: int = payload.get("company_id")
+        if username is None or user_id is None or company_id is None:
+            raise credentials_exception
+        token_data = TokenData(username=username, user_id=user_id, company_id=company_id)
+    except JWTError as e:
+        logger.error(f"JWT decode error: {str(e)}")
+        raise credentials_exception
+    
+    try:
+        user = db.query(User).filter(User.id == token_data.user_id).first()
+        if user is None:
+            raise credentials_exception
+        return user
+    except SQLAlchemyError as e:
+        logger.error(f"Database error while fetching user: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/token", response_model=Token)
-async def login_for_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-                          db: Annotated[Session, Depends(get_db)]):
-    user = authenticate_user(form_data.username, form_data.password, db)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not Validate user.')
-    token = create_access_token(user.username, user.id, user.role, timedelta(minutes=20))
-    return {'access_token': token, 'token_type': "bearer"}
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    try:
+        user = authenticate_user(db, form_data.username, form_data.password)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.username, "user_id": user.id, "company_id": user.company_id},
+            expires_delta=access_token_expires
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException as e:
+        logger.error(f"HTTP exception during login: {str(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error during login: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
+
+@router.post("/signup", status_code=status.HTTP_201_CREATED)
+async def signup(user: UserCreate, db: Session = Depends(get_db)):
+    try:
+        db_user = db.query(User).filter(User.username == user.username).first()
+        if db_user:
+            raise HTTPException(status_code=400, detail="Username already registered")
+        db_user = db.query(User).filter(User.email == user.email).first()
+        if db_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        hashed_password = get_password_hash(user.password)
+        db_user = User(
+            username=user.username,
+            email=user.email,
+            hashed_password=hashed_password,
+            role=user.role,
+            f_name=user.f_name,
+            l_name=user.l_name,
+            phone_number=user.phone_number,
+            company_id=user.company_id
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return {"message": "User created successfully"}
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error during signup: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error creating user")
+    except Exception as e:
+        logger.error(f"Unexpected error during signup: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
+
+@router.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+

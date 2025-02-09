@@ -27,11 +27,13 @@ class User(Base):
     phone_number = Column(String(15), nullable=True)
     f_name = Column(String(50), nullable=False)
     l_name = Column(String(50), nullable=False)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  # Added company_id
 
     employee_id = Column(Integer, ForeignKey("employees.id"), unique=True, nullable=True)
     employee = relationship("Employee", back_populates="user", uselist=False)
     activities = relationship("Activity", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
+    company = relationship("Company", back_populates="users")  # Added relationship
 
 class Company(Base):
     __tablename__ = "companies"
@@ -48,6 +50,7 @@ class Company(Base):
     documents = relationship("Document", back_populates="company")
     integrations = relationship("Integration", back_populates="company")
     workflows = relationship("Workflow", back_populates="company")
+    users = relationship("User", back_populates="company")  # Added relationship
 
 class Employee(Base):
     __tablename__ = "employees"
@@ -69,12 +72,12 @@ class Document(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True, nullable=False)
-    content = Column(Text, nullable=False)
-    file_path = Column(String)
-    file_type = Column(String)
-    file_size = Column(Float)
-    owner_id = Column(Integer, ForeignKey("users.id"))
-    company_id = Column(Integer, ForeignKey("companies.id"))
+    content = Column(Text, nullable=True)  # Changed to nullable
+    file_path = Column(String, nullable=False)  # Ensure this column exists
+    file_type = Column(String, nullable=False)
+    file_size = Column(Float, nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
     is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -208,3 +211,4 @@ class DocumentAIAnalysis(Base):
 
     document = relationship("Document", back_populates="ai_analyses")
     ai_model = relationship("AIModel", back_populates="document_analyses")
+

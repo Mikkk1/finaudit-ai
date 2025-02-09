@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout/Layout.tsx';
 import Login from './pages/Auth/Login.tsx';
-import Register from './pages/Auth/Register.tsx';
+import SignUp from './pages/Auth/Register.tsx';
 import MainDashboard from './pages/Dashboard/MainDashboard.tsx';
 import DocumentUpload from './pages/Documents/DocumentUpload.tsx';
 import DocumentList from './pages/Documents/DocumentList.tsx';
@@ -18,7 +18,7 @@ const App: React.FC = () => {
       <Layout>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/signup" element={<SignUp />} />
           <Route path="/" element={<DocumentList />} />
           <Route path="/documents/upload" element={<DocumentUpload />} />
           <Route path="/documents" element={<DocumentList />} />
