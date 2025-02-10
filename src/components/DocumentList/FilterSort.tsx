@@ -1,27 +1,38 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+"use client"
+
+import type React from "react"
+import { useState, useEffect } from "react"
+import { X } from "lucide-react"
 
 interface FilterSortProps {
-  onApply: (filters: any, sortBy: string) => void;
-  onClose: () => void;
+  onApply: (filters: any, sortBy: string) => void
+  onClose: () => void
+  initialFilters?: any
+  initialSortBy?: string
 }
 
-const FilterSort: React.FC<FilterSortProps> = ({ onApply, onClose }) => {
-  const [filters, setFilters] = useState({
-    type: '',
-    status: '',
-    dateFrom: '',
-    dateTo: '',
-  });
-  const [sortBy, setSortBy] = useState('uploadDate');
+const FilterSort: React.FC<FilterSortProps> = ({
+  onApply,
+  onClose,
+  initialFilters = {},
+  initialSortBy = "uploadDate",
+}) => {
+  const [filters, setFilters] = useState(initialFilters)
+  const [sortBy, setSortBy] = useState(initialSortBy)
+
+  useEffect(() => {
+    setFilters(initialFilters)
+    setSortBy(initialSortBy)
+  }, [initialFilters, initialSortBy])
 
   const handleApply = () => {
-    onApply(filters, sortBy);
-    onClose();
-  };
+    onApply(filters, sortBy)
+    onClose()
+  }
 
-  const inputStyles = "w-full p-2 border border-light-border rounded-md bg-primary-bg focus:outline-none focus:ring-2 focus:ring-navy-blue focus:border-transparent transition-all duration-200 text-dark-text placeholder-muted-text";
-  const labelStyles = "block text-sm font-medium text-slate-gray mb-2";
+  const inputStyles =
+    "w-full p-2 border border-light-border rounded-md bg-primary-bg focus:outline-none focus:ring-2 focus:ring-navy-blue focus:border-transparent transition-all duration-200 text-dark-text placeholder-muted-text"
+  const labelStyles = "block text-sm font-medium text-slate-gray mb-2"
 
   return (
     <div className="fixed inset-0 bg-dark-text/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
@@ -30,7 +41,7 @@ const FilterSort: React.FC<FilterSortProps> = ({ onApply, onClose }) => {
         <div className="bg-gradient-to-r from-navy-blue to-[#004D99] p-4 rounded-t-lg">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-secondary-bg">Filter & Sort</h2>
-            <button 
+            <button
               onClick={onClose}
               className="text-secondary-bg/80 hover:text-secondary-bg transition-colors duration-200 p-1 rounded-full hover:bg-white/10"
             >
@@ -45,7 +56,7 @@ const FilterSort: React.FC<FilterSortProps> = ({ onApply, onClose }) => {
             <div>
               <label className={labelStyles}>Document Type</label>
               <select
-                value={filters.type}
+                value={filters.type || ""}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
                 className={inputStyles}
               >
@@ -59,7 +70,7 @@ const FilterSort: React.FC<FilterSortProps> = ({ onApply, onClose }) => {
             <div>
               <label className={labelStyles}>Status</label>
               <select
-                value={filters.status}
+                value={filters.status || ""}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                 className={inputStyles}
               >
@@ -76,7 +87,7 @@ const FilterSort: React.FC<FilterSortProps> = ({ onApply, onClose }) => {
                 <div className="w-1/2">
                   <input
                     type="date"
-                    value={filters.dateFrom}
+                    value={filters.dateFrom || ""}
                     onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
                     className={inputStyles}
                   />
@@ -84,7 +95,7 @@ const FilterSort: React.FC<FilterSortProps> = ({ onApply, onClose }) => {
                 <div className="w-1/2">
                   <input
                     type="date"
-                    value={filters.dateTo}
+                    value={filters.dateTo || ""}
                     onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
                     className={inputStyles}
                   />
@@ -94,11 +105,7 @@ const FilterSort: React.FC<FilterSortProps> = ({ onApply, onClose }) => {
 
             <div>
               <label className={labelStyles}>Sort By</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className={inputStyles}
-              >
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={inputStyles}>
                 <option value="uploadDate">Upload Date</option>
                 <option value="name">Name</option>
                 <option value="size">Size</option>
@@ -127,7 +134,8 @@ const FilterSort: React.FC<FilterSortProps> = ({ onApply, onClose }) => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default FilterSort;
+export default FilterSort
+

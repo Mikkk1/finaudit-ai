@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { useState, useCallback, useEffect } from "react"
 import { UploadCloud, AlertCircle, CheckCircle, XCircle } from "lucide-react"
@@ -6,11 +8,15 @@ import FileList from "../../components/DocumentUpload/FileList.tsx"
 import MetadataForm from "../../components/DocumentUpload/MetaDataForm.tsx"
 import UploadProgress from "../../components/DocumentUpload/UploadProgress.tsx"
 import PreviewModal from "../../components/DocumentUpload/PreviewModal.tsx"
-import type { UploadedFile } from "../../types/documentUpload.tsx"
+import type { UploadedFile } from "../../types/documentUpload.ts"
 import axios from "axios"
 
 // Toast component for notifications
-const Toast: React.FC<{ type: "success" | "error"; message: string; onClose: () => void }> = ({ type, message, onClose }) => {
+const Toast: React.FC<{ type: "success" | "error"; message: string; onClose: () => void }> = ({
+  type,
+  message,
+  onClose,
+}) => {
   const bgColor = type === "success" ? "bg-success-green" : "bg-error-red"
   const icon = type === "success" ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />
 
@@ -69,7 +75,13 @@ const DocumentUpload: React.FC = () => {
       if (file.status === "pending") {
         const formData = new FormData()
         formData.append("file", file.file)
-        formData.append("metadata", JSON.stringify(file.metadata))
+
+        // Ensure metadata is not empty and add title if not present
+        const metadata = {
+          ...file.metadata,
+          title: file.metadata.title || file.file.name,
+        }
+        formData.append("metadata", JSON.stringify(metadata))
 
         try {
           const response = await axios.post("http://127.0.0.1:8000/documents", formData, {
@@ -92,7 +104,10 @@ const DocumentUpload: React.FC = () => {
         } catch (error) {
           console.error("Error uploading file:", error)
           setFiles((prevFiles) => prevFiles.map((f) => (f.id === file.id ? { ...f, status: "error" } : f)))
-          showToast("error", `Error uploading file ${file.file.name}: ${error.response?.data?.detail || "Unknown error"}`)
+          showToast(
+            "error",
+            `Error uploading file ${file.file.name}: ${error.response?.data?.detail || "Unknown error"}`,
+          )
         }
       }
     }
@@ -172,3 +187,4 @@ const DocumentUpload: React.FC = () => {
 }
 
 export default DocumentUpload
+

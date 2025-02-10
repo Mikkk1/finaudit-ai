@@ -27,13 +27,13 @@ class User(Base):
     phone_number = Column(String(15), nullable=True)
     f_name = Column(String(50), nullable=False)
     l_name = Column(String(50), nullable=False)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  # Added company_id
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
 
     employee_id = Column(Integer, ForeignKey("employees.id"), unique=True, nullable=True)
     employee = relationship("Employee", back_populates="user", uselist=False)
     activities = relationship("Activity", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
-    company = relationship("Company", back_populates="users")  # Added relationship
+    company = relationship("Company", back_populates="users")
 
 class Company(Base):
     __tablename__ = "companies"
@@ -50,7 +50,7 @@ class Company(Base):
     documents = relationship("Document", back_populates="company")
     integrations = relationship("Integration", back_populates="company")
     workflows = relationship("Workflow", back_populates="company")
-    users = relationship("User", back_populates="company")  # Added relationship
+    users = relationship("User", back_populates="company")
 
 class Employee(Base):
     __tablename__ = "employees"
@@ -72,8 +72,8 @@ class Document(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True, nullable=False)
-    content = Column(Text, nullable=True)  # Changed to nullable
-    file_path = Column(String, nullable=False)  # Ensure this column exists
+    content = Column(Text, nullable=True)
+    file_path = Column(String, nullable=False)
     file_type = Column(String, nullable=False)
     file_size = Column(Float, nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -169,6 +169,8 @@ class WorkflowStep(Base):
     step_number = Column(Integer)
     action = Column(String)
     role_required = Column(Enum('admin', 'manager', 'employee', 'auditor'))
+    timeout_duration = Column(Integer, nullable=True)  # Timeout duration in hours
+    is_parallel = Column(Boolean, default=False)  # Whether this step can be executed in parallel
 
     workflow = relationship("Workflow", back_populates="steps")
 
@@ -179,12 +181,32 @@ class DocumentWorkflow(Base):
     document_id = Column(Integer, ForeignKey("documents.id"))
     workflow_id = Column(Integer, ForeignKey("workflows.id"))
     current_step = Column(Integer)
-    status = Column(String)
+    status = Column(Enum("in_progress", "completed", "rejected", "timed_out"))
     started_at = Column(DateTime, default=datetime.utcnow)
-    completed_at = Column(DateTime)
+    completed_at = Column(DateTime, nullable=True)
+    rejected_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # User who rejected the workflow
+    rejected_at = Column(DateTime, nullable=True)  # Timestamp when the workflow was rejected
+    timeout_at = Column(DateTime, nullable=True)  # Timestamp when the current step will timeout
 
     document = relationship("Document", back_populates="document_workflows")
     workflow = relationship("Workflow", back_populates="document_workflows")
+    execution_history = relationship("WorkflowExecutionHistory", back_populates="document_workflow")
+    rejected_user = relationship("User", foreign_keys=[rejected_by])
+
+class WorkflowExecutionHistory(Base):
+    __tablename__ = "workflow_execution_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_workflow_id = Column(Integer, ForeignKey("document_workflows.id"))
+    step_number = Column(Integer)
+    action = Column(String)
+    performed_by = Column(Integer, ForeignKey("users.id"))  # User who performed the step
+    performed_at = Column(DateTime, default=datetime.utcnow)
+    notes = Column(Text, nullable=True)  # Optional notes for the step
+    status = Column(Enum("completed", "rejected", "timed_out"))  # Status of the step
+
+    document_workflow = relationship("DocumentWorkflow", back_populates="execution_history")
+    user = relationship("User")
 
 class AIModel(Base):
     __tablename__ = "ai_models"
@@ -212,3 +234,16 @@ class DocumentAIAnalysis(Base):
     document = relationship("Document", back_populates="ai_analyses")
     ai_model = relationship("AIModel", back_populates="document_analyses")
 
+class DocumentMetadata(Base):
+    __tablename__ = "document_metadata"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    key = Column(String, nullable=False)  # Metadata key (e.g., Document Type, Fiscal Year, etc.)
+    value = Column(String, nullable=False)  # Metadata value
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    document = relationship("Document", back_populates="metadata")
+
+# Add this relationship in the Document model
+Document.metadata = relationship("DocumentMetadata", back_populates="document")
