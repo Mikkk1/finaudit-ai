@@ -13,7 +13,8 @@ from .models import (
     WorkflowStep,
     DocumentWorkflow,
     AIModel,
-    DocumentAIAnalysis
+    DocumentAIAnalysis,
+    DocumentMetadata
 )
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "WorkflowStep",
     "DocumentWorkflow",
     "AIModel",
-    "DocumentAIAnalysis"
+    "DocumentAIAnalysis",
+    "DocumentMetadata"
 ]
 
