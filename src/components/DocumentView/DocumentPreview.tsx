@@ -2,8 +2,9 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
-import { PDFSlick } from "@pdfslick/core"
-import "@pdfslick/core/dist/pdf_viewer.css"
+import { Document, Page, pdfjs } from "react-pdf"
+import "react-pdf/dist/esm/Page/AnnotationLayer.css"
+import "react-pdf/dist/esm/Page/TextLayer.css"
 import {
   ZoomIn,
   ZoomOut,
@@ -17,6 +18,9 @@ import {
 } from "lucide-react"
 import { Spreadsheet } from "react-spreadsheet"
 import axios from "axios"
+
+// Set up the worker for react-pdf
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 interface DocumentPreviewProps {
   document: {
@@ -32,9 +36,6 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) => {
   const [scale, setScale] = useState(1.0)
   const [rotation, setRotation] = useState(0)
   const [documentContent, setDocumentContent] = useState<string | null>(null) // Store document content URL
-
-  // Use a ref to store the PDFSlick instance
-  const pdfSlickRef = useRef<PDFSlick | null>(null)
 
   // Fetch document content securely from the backend for all file types
   useEffect(() => {
@@ -62,28 +63,6 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) => {
     // Fetch content for all file types
     fetchDocumentContent()
   }, [document.id, document.file_type])
-
-  // Initialize PDFSlick after the document content is fetched (only for PDFs)
-  useEffect(() => {
-    if (document.file_type === "application/pdf" && documentContent) {
-      const container = document.getElementById("pdf-viewer")
-      if (container) {
-        // Initialize PDFSlick only if the container exists
-        pdfSlickRef.current = new PDFSlick({
-          container: "#pdf-viewer",
-          documentUrl: documentContent, // Use the secure document content URL
-        })
-
-        // Clean up the PDFSlick instance when the component unmounts
-        return () => {
-          if (pdfSlickRef.current) {
-            pdfSlickRef.current.destroy()
-            pdfSlickRef.current = null
-          }
-        }
-      }
-    }
-  }, [documentContent, document.file_type])
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages)
@@ -117,12 +96,23 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) => {
   )
 
   const renderPreview = () => {
-    console.log("Document Type: ",document.file_type);
+    console.log("Document Type: ", document.file_type)
     switch (document.file_type) {
       case "application/pdf":
         return (
-          <div id="pdf-viewer" className="w-full h-[600px]">
-            {/* PDF Slick will render the PDF here */}
+          <div className="w-full h-[600px] overflow-auto">
+            <Document
+              file={documentContent}
+              onLoadSuccess={onDocumentLoadSuccess}
+              loading={<div className="text-center py-8">Loading PDF...</div>}
+            >
+              <Page
+                pageNumber={pageNumber}
+                scale={scale}
+                rotate={rotation}
+                loading={<div className="text-center py-8">Loading page...</div>}
+              />
+            </Document>
           </div>
         )
       case "image/jpeg":

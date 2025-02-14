@@ -2,7 +2,20 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, ChevronRight } from 'lucide-react';
 
-const RelatedDocumentsPanel = ({ document }) => {
+interface RelatedDocument {
+  id: number;
+  name: string;
+  type: string;
+  size: string;
+}
+
+interface RelatedDocumentsPanelProps {
+  document: {
+    relatedDocuments: RelatedDocument[];
+  };
+}
+
+const RelatedDocumentsPanel: React.FC<RelatedDocumentsPanelProps> = ({ document }) => {
   return (
     <div className="bg-secondary-bg rounded-xl shadow-card overflow-hidden animate-fadeIn">
       {/* Header with gradient */}
