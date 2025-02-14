@@ -14,7 +14,9 @@ from .models import (
     DocumentWorkflow,
     AIModel,
     DocumentAIAnalysis,
-    DocumentMetadata
+    DocumentMetadata,
+    Annotation,
+    RelatedDocument
 )
 
 __all__ = [
@@ -33,6 +35,8 @@ __all__ = [
     "DocumentWorkflow",
     "AIModel",
     "DocumentAIAnalysis",
-    "DocumentMetadata"
+    "DocumentMetadata",
+    "Annotation",
+    "RelatedDocument"
 ]
 
