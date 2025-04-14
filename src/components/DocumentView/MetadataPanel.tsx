@@ -6,7 +6,7 @@ import { Edit2, Save, X, ChevronDown, ChevronRight } from "lucide-react"
 import axios from "axios"
 
 interface Metadata {
-  [key: string]: string
+  [key: string]: string | object | any
 }
 
 interface Document {
@@ -117,8 +117,20 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ document }) => {
     return <span className="text-dark-text">{String(value)}</span>
   }
 
-  if (!document || !document.metadata) {
-    return <div>No metadata available</div>
+  // Handle empty metadata
+  if (!document || !document.metadata || Object.keys(document.metadata).length === 0) {
+    return (
+      <div className="bg-secondary-bg rounded-xl shadow-card overflow-hidden animate-fadeIn">
+        <div className="bg-gradient-to-r from-[#003366] to-[#004D99] px-6 py-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-white">Document Metadata</h3>
+          </div>
+        </div>
+        <div className="p-6 text-center text-slate-gray">
+          No metadata available for this document.
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -207,4 +219,3 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ document }) => {
 }
 
 export default MetadataPanel
-

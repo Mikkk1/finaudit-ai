@@ -6,4 +6,11 @@ export interface UploadedFile {
     status: 'pending' | 'uploading' | 'uploaded' | 'error';
   }
   
-  
+  export interface Document {
+    id: string
+    title: string
+    file_type: string
+    file_size: number
+    created_at: string
+    workflow_status: string
+  }

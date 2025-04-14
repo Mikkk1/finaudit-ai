@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useEffect, useCallback } from "react"
 import { File, CheckCircle, Download, Edit2, Share2, Info, Trash2 } from "lucide-react"
 import type { Document } from "../../types/documentUpload.ts"
+import { formatFileType, formatFileSize } from "../../utils/fileFormatters.ts"
 
 interface DocumentListViewProps {
   documents: Document[]
@@ -87,9 +88,7 @@ const DocumentListView: React.FC<DocumentListViewProps> = ({
             <th className="px-6 py-4 text-left text-xs font-medium text-slate-gray uppercase tracking-wider">
               Upload Date
             </th>
-            <th className="px-6 py-4 text-left text-xs font-medium text-slate-gray uppercase tracking-wider">
-              Status
-            </th>
+            <th className="px-6 py-4 text-left text-xs font-medium text-slate-gray uppercase tracking-wider">Status</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-light-border">
@@ -121,8 +120,8 @@ const DocumentListView: React.FC<DocumentListViewProps> = ({
                   <span className="ml-3 font-medium text-dark-text">{doc.title}</span>
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-slate-gray">{doc.file_type}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-slate-gray">{doc.file_size}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-slate-gray">{formatFileType(doc.file_type)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-slate-gray">{formatFileSize(doc.file_size)}</td>
               <td className="px-6 py-4 whitespace-nowrap text-slate-gray">{formatDate(doc.created_at)}</td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <span

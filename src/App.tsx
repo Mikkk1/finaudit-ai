@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-d
 import Layout from "./components/Layout/Layout.tsx"
 import Login from "./pages/Auth/Login.tsx"
 import SignUp from "./pages/Auth/Register.tsx"
-import MainDashboard from "./pages/Dashboard/MainDashboard.tsx"
+import Dashboard from "./pages/Dashboard/MainDashboard.tsx"
 import DocumentUpload from "./pages/Documents/DocumentUpload.tsx"
 import DocumentList from "./pages/Documents/DocumentList.tsx"
 import DocumentView from "./pages/Documents/DocumentView.tsx"
@@ -41,7 +41,7 @@ const App: React.FC = () => {
             <PrivateRoute
               element={
                 <Layout>
-                  <MainDashboard />
+                  <Dashboard />
                 </Layout>
               }
             />

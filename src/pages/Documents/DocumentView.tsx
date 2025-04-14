@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
-import DocumentPreview from '../../components/DocumentView/DocumentPreview.tsx';
-import MetadataPanel from '../../components/DocumentView/MetadataPanel.tsx';
-import AIAnalysisPanel from '../../components/DocumentView/AiAnalysisPanel.tsx';
-import AnnotationPanel from '../../components/DocumentView/AnnotationPanel.tsx';
-import VersionControlPanel from '../../components/DocumentView/VersionControlPanel.tsx';
-import RelatedDocumentsPanel from '../../components/DocumentView/RelatedDocumentsPanel.tsx';
-import WorkflowPanel from '../../components/DocumentView/WorkflowPanel.tsx';
-import ActivityLogPanel from '../../components/DocumentView/ActivityLogPanel.tsx';
-import DocumentActions from '../../components/DocumentView/DocumentActions.tsx';
+"use client"
+
+import type React from "react"
+import { useState, useEffect } from "react"
+import { X } from "lucide-react"
+import DocumentPreview from "../../components/DocumentView/DocumentPreview.tsx"
+import MetadataPanel from "../../components/DocumentView/MetadataPanel.tsx"
+import AIAnalysisPanel from "../../components/DocumentView/AiAnalysisPanel.tsx"
+import AnnotationPanel from "../../components/DocumentView/AnnotationPanel.tsx"
+import VersionControlPanel from "../../components/DocumentView/VersionControlPanel.tsx"
+import RelatedDocumentsPanel from "../../components/DocumentView/RelatedDocumentsPanel.tsx"
+import WorkflowPanel from "../../components/DocumentView/WorkflowPanel.tsx"
+import ActivityLogPanel from "../../components/DocumentView/ActivityLogPanel.tsx"
+import DocumentContentPanel from "../../components/DocumentView/document-content-panel.tsx"
+import DocumentActions from "../../components/DocumentView/DocumentActions.tsx"
 import axios from "axios"
 
 interface DocumentViewProps {
@@ -46,6 +50,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
 
   const tabs = [
     { id: "preview", label: "Preview" },
+    { id: "content", label: "Content" },
     { id: "metadata", label: "Metadata" },
     { id: "ai-analysis", label: "AI Analysis" },
     { id: "annotations", label: "Annotations" },
@@ -100,7 +105,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
           </button>
         </div>
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex">
+          <nav className="-mb-px flex overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -108,7 +113,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
                   activeTab === tab.id
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+                } whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm transition-colors`}
                 onClick={() => setActiveTab(tab.id)}
               >
                 {tab.label}
@@ -118,6 +123,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
         </div>
         <div className="p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
           {activeTab === "preview" && <DocumentPreview document={document} />}
+          {activeTab === "content" && <DocumentContentPanel document={document} />}
           {activeTab === "metadata" && document.metadata && <MetadataPanel document={document} />}
           {activeTab === "ai-analysis" && <AIAnalysisPanel document={document} />}
           {activeTab === "annotations" && <AnnotationPanel document={document} />}

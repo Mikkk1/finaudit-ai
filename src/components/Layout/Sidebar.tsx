@@ -18,7 +18,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
   const [isHovered, setIsHovered] = useState(false);
 
   const menuItems = [
-    { name: 'Dashboard', path: '/', icon: BarChart },
+    { name: 'Dashboard', path: '/dashboard', icon: BarChart },
     { name: 'Upload Document', path: '/documents/upload', icon: Upload },
     { name: 'Document List', path: '/documents', icon: List },
     { name: 'Document Analysis', path: '/documents/analysis', icon: Beaker },

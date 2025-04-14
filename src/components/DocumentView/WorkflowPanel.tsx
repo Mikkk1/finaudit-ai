@@ -1,7 +1,40 @@
 import React from 'react';
 import { CheckCircle, Circle, ArrowRight } from 'lucide-react';
 
-const WorkflowPanel = ({ document }) => {
+interface WorkflowStep {
+  id: number;
+  name: string;
+  status: 'complete' | 'current' | 'upcoming';
+}
+
+interface WorkflowExecutionHistory {
+  id: number;
+  step_number: number;
+  action: string;
+  performed_by: number;
+  performed_at: string;
+  notes: string;
+  status: string;
+}
+
+interface DocumentWorkflow {
+  id: number;
+  workflow_id: number;
+  current_step: number;
+  status: string;
+  started_at: string;
+  completed_at: string;
+  timeout_at: string;
+  execution_history: WorkflowExecutionHistory[];
+}
+
+interface WorkflowPanelProps {
+  document: {
+    workflows: DocumentWorkflow[];
+  };
+}
+
+const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
   const workflowSteps = [
     { id: 1, name: 'Upload', status: 'complete' },
     { id: 2, name: 'Review', status: 'current' },

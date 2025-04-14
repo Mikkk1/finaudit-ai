@@ -72,7 +72,7 @@ class Document(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True, nullable=False)
-    content = Column(Text, nullable=True)
+    content = Column(JSON, nullable=True)
     file_path = Column(String, nullable=False)
     file_type = Column(String, nullable=False)
     file_size = Column(Float, nullable=False)
@@ -245,5 +245,41 @@ class DocumentMetadata(Base):
 
     document = relationship("Document", back_populates="metadata")
 
+class Annotation(Base):
+    __tablename__ = "annotations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id"))
+    text = Column(Text, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    document = relationship("Document", back_populates="annotations")
+    user = relationship("User")
+class RelatedDocument(Base):
+    __tablename__ = "related_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    related_document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    document = relationship("Document", foreign_keys=[document_id])
+    related_document = relationship("Document", foreign_keys=[related_document_id])
+
+# Add this relationship to the Document model
+Document.related_documents = relationship(
+    "RelatedDocument",
+    foreign_keys=[RelatedDocument.document_id],
+    back_populates="document"
+)
+
+Document.related_to_documents = relationship(
+    "RelatedDocument",
+    foreign_keys=[RelatedDocument.related_document_id],
+    back_populates="related_document"
+)
 # Add this relationship in the Document model
 Document.metadata = relationship("DocumentMetadata", back_populates="document")
+Document.annotations = relationship("Annotation", back_populates="document")

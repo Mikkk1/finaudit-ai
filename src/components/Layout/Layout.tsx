@@ -41,7 +41,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               {/* Content Wrapper with Max Width */}
               <div className="max-w-7xl mx-auto space-y-6 pb-6">
                 {/* Shadow Container */}
-                <div className="bg-white rounded-xl shadow-sm border border-light-border">
+                <div className="bg-white rounded-xl shadow-sm border border-light-border mt-20">
                   {children}
                 </div>
               </div>

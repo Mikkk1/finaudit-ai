@@ -175,7 +175,7 @@ const DocumentList: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900 pt-12 mt-6">
+    <div className="min-h-screen bg-gray-100 text-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Section */}
         <div className="flex justify-between items-center mb-8">
@@ -183,9 +183,9 @@ const DocumentList: React.FC = () => {
             <FileText size={32} className="text-blue-600" />
             <h1 className="text-3xl font-semibold text-gray-900">Document List</h1>
           </div>
-          <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl">
+          <button className="flex items-center gap-2 bg-gradient-to-r from-navy-blue to-[#004D99] text-white hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl">
             <Plus size={20} />
-            <span className="font-medium">New Document</span>
+            <span className="font-medium ">New Document</span>
           </button>
         </div>
 
@@ -225,7 +225,6 @@ const DocumentList: React.FC = () => {
               </button>
             </div>
 
-            <CustomViews onSelectView={handleSelectView} />
           </div>
 
           {/* Filter/Sort Panel */}
