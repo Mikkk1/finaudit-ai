@@ -117,6 +117,7 @@ def create_document(db: Session, file, metadata: str, current_user):
         db.commit()
         db.refresh(db_document)
         
+        # Add metadata
         for key, value in metadata_dict.items():
             if key not in ['title', 'description']:
                 db_metadata = DocumentMetadata(
@@ -126,28 +127,34 @@ def create_document(db: Session, file, metadata: str, current_user):
                 )
                 db.add(db_metadata)
         
+        # Create initial version automatically
+        initial_version = DocumentVersion(
+            document_id=db_document.id,
+            version_number=1,
+            content="Initial document version",
+            file_path=file_location,  # Store the file path in the initial version
+            created_at=datetime.utcnow()
+        )
+        db.add(initial_version)
+        
+        # Set up workflow if needed
         workflow = db.query(Workflow).filter(
             Workflow.name == "Document Approval Workflow",
             Workflow.company_id == current_user.company_id
         ).first()
 
-        if not workflow:
-            raise HTTPException(
-                status_code=404,
-                detail="Document Approval Workflow not found"
+        if workflow:
+            document_workflow = DocumentWorkflow(
+                document_id=db_document.id,
+                workflow_id=workflow.id,
+                current_step=1,
+                status="in_progress",
+                started_at=datetime.utcnow(),
+                timeout_at=datetime.utcnow() + timedelta(hours=24)
             )
-
-        document_workflow = DocumentWorkflow(
-            document_id=db_document.id,
-            workflow_id=workflow.id,
-            current_step=1,
-            status="in_progress",
-            started_at=datetime.utcnow(),
-            timeout_at=datetime.utcnow() + timedelta(hours=24)
-        )
-        db.add(document_workflow)
+            db.add(document_workflow)
+        
         db.commit()
-
         return db_document
     
     except ValidationError as e:

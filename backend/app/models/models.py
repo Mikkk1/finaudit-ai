@@ -132,6 +132,7 @@ class DocumentVersion(Base):
     version_number = Column(Integer)
     content = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+    file_path = Column(String, nullable=True)  # Added file_path column to store version-specific file paths
 
     document = relationship("Document", back_populates="versions")
 

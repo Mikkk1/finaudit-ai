@@ -26,27 +26,32 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchDocument = async () => {
-      setIsLoading(true)
-      try {
-        const token = localStorage.getItem("token") // Retrieve the token from localStorage
-        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`, // Include the bearer token in the request header
-          },
-        })
-        setDocument(response.data)
-        setIsLoading(false)
-      } catch (err) {
-        console.error("Error fetching document:", err)
-        setError("Failed to fetch document")
-        setIsLoading(false)
-      }
+  const fetchDocument = async () => {
+    setIsLoading(true)
+    try {
+      const token = localStorage.getItem("token") // Retrieve the token from localStorage
+      const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`, // Include the bearer token in the request header
+        },
+      })
+      setDocument(response.data)
+      setIsLoading(false)
+    } catch (err) {
+      console.error("Error fetching document:", err)
+      setError("Failed to fetch document")
+      setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchDocument()
   }, [documentId])
+
+  // Function to refresh document data after updates
+  const refreshDocument = () => {
+    fetchDocument()
+  }
 
   const tabs = [
     { id: "preview", label: "Preview" },
@@ -127,13 +132,13 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
           {activeTab === "metadata" && document.metadata && <MetadataPanel document={document} />}
           {activeTab === "ai-analysis" && <AIAnalysisPanel document={document} />}
           {activeTab === "annotations" && <AnnotationPanel document={document} />}
-          {activeTab === "versions" && <VersionControlPanel document={document} />}
+          {activeTab === "versions" && <VersionControlPanel document={document} onVersionChange={refreshDocument} />}
           {activeTab === "related" && <RelatedDocumentsPanel document={document} />}
           {activeTab === "workflow" && <WorkflowPanel document={document} />}
           {activeTab === "activity" && <ActivityLogPanel document={document} />}
         </div>
         <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-          <DocumentActions document={document} />
+          <DocumentActions document={document} onActionComplete={refreshDocument} />
         </div>
       </div>
     </div>
@@ -141,4 +146,3 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
 }
 
 export default DocumentView
-

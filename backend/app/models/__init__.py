@@ -1,17 +1,19 @@
+# Import all models to make them available when importing from app.models
 from .models import (
+    User, 
     UserRole,
-    User,
-    Company,
-    Employee,
-    Document,
-    Activity,
-    Integration,
-    Notification,
-    DocumentVersion,
-    Comment,
-    Workflow,
-    WorkflowStep,
-    DocumentWorkflow,
+    Company, 
+    Employee, 
+    Document, 
+    Activity, 
+    Integration, 
+    Notification, 
+    DocumentVersion, 
+    Comment, 
+    Workflow, 
+    WorkflowStep, 
+    DocumentWorkflow, 
+    WorkflowExecutionHistory,  # This was missing
     AIModel,
     DocumentAIAnalysis,
     DocumentMetadata,
@@ -19,24 +21,25 @@ from .models import (
     RelatedDocument
 )
 
+# Export all models
 __all__ = [
-    "UserRole",
-    "User",
-    "Company",
-    "Employee",
-    "Document",
-    "Activity",
-    "Integration",
-    "Notification",
-    "DocumentVersion",
-    "Comment",
-    "Workflow",
-    "WorkflowStep",
-    "DocumentWorkflow",
-    "AIModel",
-    "DocumentAIAnalysis",
-    "DocumentMetadata",
-    "Annotation",
-    "RelatedDocument"
+    'User',
+    'UserRole',
+    'Company',
+    'Employee',
+    'Document',
+    'Activity',
+    'Integration',
+    'Notification',
+    'DocumentVersion',
+    'Comment',
+    'Workflow',
+    'WorkflowStep',
+    'DocumentWorkflow',
+    'WorkflowExecutionHistory',  # This was missing
+    'AIModel',
+    'DocumentAIAnalysis',
+    'DocumentMetadata',
+    'Annotation',
+    'RelatedDocument'
 ]
-
