@@ -29,7 +29,7 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ documentId, document }) =
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/metadata`, {
+        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/metadata`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -50,7 +50,7 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ documentId, document }) =
     try {
       setLoading(true)
       const token = localStorage.getItem("token")
-      await axios.post(`http://127.0.0.1:8000/documents/${documentId}/metadata`, editedMetadata, {
+      await axios.post(`https://finaudit.live/api/documents/${documentId}/metadata`, editedMetadata, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -69,7 +69,7 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ documentId, document }) =
     const fetchMetadata = async () => {
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/metadata`, {
+        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/metadata`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

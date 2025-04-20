@@ -84,7 +84,7 @@ const DocumentUpload: React.FC = () => {
           }
           formData.append("metadata", JSON.stringify(metadata))
 
-          const response = await axios.post("http://127.0.0.1:8000/documents", formData, {
+          const response = await axios.post("https://finaudit.live/api/documents", formData, {
             headers: {
               "Content-Type": "multipart/form-data",
               Authorization: `Bearer ${token}`,

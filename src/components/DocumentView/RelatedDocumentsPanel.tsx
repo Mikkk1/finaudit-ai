@@ -30,7 +30,7 @@ const RelatedDocumentsPanel: React.FC<RelatedDocumentsPanelProps> = ({ documentI
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/related`, {
+        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/related`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

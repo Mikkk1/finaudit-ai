@@ -32,7 +32,7 @@ const AnnotationPanel: React.FC<AnnotationPanelProps> = ({ documentId, document 
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/annotations`, {
+        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/annotations`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -63,7 +63,7 @@ const AnnotationPanel: React.FC<AnnotationPanelProps> = ({ documentId, document 
     try {
       const token = localStorage.getItem("token")
       const response = await axios.post(
-        `http://127.0.0.1:8000/documents/${documentId}/annotations`,
+        `https://finaudit.live/api/documents/${documentId}/annotations`,
         { text: newAnnotation.trim() },
         {
           headers: {
@@ -87,7 +87,7 @@ const AnnotationPanel: React.FC<AnnotationPanelProps> = ({ documentId, document 
   const deleteAnnotation = async (id: number) => {
     try {
       const token = localStorage.getItem("token")
-      await axios.delete(`http://127.0.0.1:8000/documents/${documentId}/annotations/${id}`, {
+      await axios.delete(`https://finaudit.live/api/documents/${documentId}/annotations/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

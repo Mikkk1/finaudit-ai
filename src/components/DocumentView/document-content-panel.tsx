@@ -29,7 +29,7 @@ export default function DocumentContentPanel({ documentId, document }: DocumentC
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/content-data`, {
+        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/content-data`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -56,7 +56,7 @@ export default function DocumentContentPanel({ documentId, document }: DocumentC
       }
 
       await axios.patch(
-        `http://127.0.0.1:8000/documents/${documentId}/content`,
+        `https://finaudit.live/api/documents/${documentId}/content`,
         { content: editedContent },
         {
           headers: {

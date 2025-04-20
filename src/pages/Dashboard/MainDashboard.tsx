@@ -137,19 +137,19 @@ export default function Dashboard() {
     queryKey: ['dashboard'],
     queryFn: async () => {
       const [statsRes, activityRes, approvalsRes] = await Promise.all([
-        axios.get('http://127.0.0.1:8000/dashboard/stats', {
+        axios.get('https://finaudit.live/api/dashboard/stats', {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }),
-        axios.get('http://127.0.0.1:8000/dashboard/recent-activity', {
+        axios.get('https://finaudit.live/api/dashboard/recent-activity', {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }),
-        axios.get('http://127.0.0.1:8000/dashboard/pending-approvals', {
+        axios.get('https://finaudit.live/api/dashboard/pending-approvals', {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",

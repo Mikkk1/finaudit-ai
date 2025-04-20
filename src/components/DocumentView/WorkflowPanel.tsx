@@ -58,7 +58,7 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ documentId, document }) =
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/workflows`, {
+        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/workflows`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -146,7 +146,7 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ documentId, document }) =
     try {
       const token = localStorage.getItem("token")
       const response = await axios.post(
-        `http://127.0.0.1:8000/documents/${documentId}/workflow/action`,
+        `https://finaudit.live/api/documents/${documentId}/workflow/action`,
         {
           workflow_id: activeWorkflow.id,
           action: actionType,
