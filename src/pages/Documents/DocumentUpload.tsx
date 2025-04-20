@@ -21,7 +21,7 @@ const Toast: React.FC<{ type: "success" | "error"; message: string; onClose: () 
   const icon = type === "success" ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />
 
   return (
-    <div className={`fixed top-4 right-4 p-4 rounded-md text-white ${bgColor} flex items-center space-x-2 shadow-lg`}>
+    <div className={`fixed top-20 right-4 p-4 rounded-md text-white ${bgColor} flex items-center space-x-2 shadow-lg`}>
       {icon}
       <span>{message}</span>
       <button onClick={onClose} className="ml-4 text-sm font-semibold">
@@ -71,19 +71,19 @@ const DocumentUpload: React.FC = () => {
     setUploading(true)
     const uploadedFiles: UploadedFile[] = []
 
-    for (const file of files) {
-      if (file.status === "pending") {
-        const formData = new FormData()
-        formData.append("file", file.file)
+    try {
+      for (const file of files) {
+        if (file.status === "pending") {
+          const formData = new FormData()
+          formData.append("file", file.file)
 
-        // Ensure metadata is not empty and add title if not present
-        const metadata = {
-          ...file.metadata,
-          title: file.metadata.title || file.file.name,
-        }
-        formData.append("metadata", JSON.stringify(metadata))
+          // Ensure metadata is not empty and add title if not present
+          const metadata = {
+            ...file.metadata,
+            title: file.metadata.title || file.file.name,
+          }
+          formData.append("metadata", JSON.stringify(metadata))
 
-        try {
           const response = await axios.post("http://127.0.0.1:8000/documents", formData, {
             headers: {
               "Content-Type": "multipart/form-data",
@@ -101,22 +101,23 @@ const DocumentUpload: React.FC = () => {
           setFiles((prevFiles) =>
             prevFiles.map((f) => (f.id === file.id ? { ...f, status: "uploaded", serverResponse: response.data } : f)),
           )
-        } catch (error) {
-          console.error("Error uploading file:", error)
-          setFiles((prevFiles) => prevFiles.map((f) => (f.id === file.id ? { ...f, status: "error" } : f)))
-          showToast(
-            "error",
-            `Error uploading file ${file.file.name}: ${error.response?.data?.detail || "Unknown error"}`,
-          )
         }
       }
-    }
 
-    setUploading(false)
-
-    if (uploadedFiles.length > 0) {
-      showToast("success", `${uploadedFiles.length} file(s) uploaded successfully!`)
-      setFiles((prevFiles) => prevFiles.filter((file) => !uploadedFiles.includes(file))) // Remove uploaded files
+      if (uploadedFiles.length > 0) {
+        showToast("success", `${uploadedFiles.length} file(s) uploaded successfully!`)
+        // Clear all files after successful upload instead of just filtering
+        setFiles([])
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error)
+      setFiles((prevFiles) => prevFiles.map((f) => (f.status === "pending" ? { ...f, status: "error" } : f)))
+      showToast(
+        "error",
+        `Error uploading files: ${error.response?.data?.detail || "Unknown error"}`,
+      )
+    } finally {
+      setUploading(false)
     }
   }
 

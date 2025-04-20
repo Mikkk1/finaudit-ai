@@ -18,6 +18,7 @@ import { Spreadsheet } from "react-spreadsheet"
 import axios from "axios"
 
 interface DocumentPreviewProps {
+  documentId: string
   document: {
     id: number
     file_type: string
@@ -25,7 +26,7 @@ interface DocumentPreviewProps {
   }
 }
 
-const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) => {
+const DocumentPreview: React.FC<DocumentPreviewProps> = ({ documentId, document }) => {
   const [numPages, setNumPages] = useState<number | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
   const [scale, setScale] = useState(1.0)
@@ -42,7 +43,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) => {
       setError(null)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`http://127.0.0.1:8000/documents/${document.id}/content`, {
+        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/preview`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -51,8 +52,8 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) => {
         const url = URL.createObjectURL(response.data)
         setDocumentContent(url)
       } catch (err) {
-        console.error("Error fetching document content:", err)
-        setError("Failed to load document. Please try again.")
+        console.error("Error fetching document preview:", err)
+        setError("Failed to load document preview. Please try again.")
       } finally {
         setLoading(false)
       }
@@ -66,7 +67,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) => {
         URL.revokeObjectURL(documentContent)
       }
     }
-  }, [document.id])
+  }, [documentId])
 
   useEffect(() => {
     const iframe = iframeRef.current
@@ -160,15 +161,15 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) => {
     try {
       setDownloadLoading(true)
       const token = localStorage.getItem("token")
-      
+
       // Use the dedicated download endpoint
-      const response = await axios.get(`http://127.0.0.1:8000/documents/${document.id}/download`, {
+      const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/download`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
         responseType: "blob",
       })
-  
+
       // Get filename from Content-Disposition header if available
       const contentDisposition = response.headers["content-disposition"]
       let fileName = document.name
@@ -178,7 +179,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) => {
           fileName = fileNameMatch[1]
         }
       }
-  
+
       // Create and trigger download - use window.document to avoid name collision
       const url = window.URL.createObjectURL(new Blob([response.data]))
       const link = window.document.createElement("a")
@@ -186,7 +187,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) => {
       link.setAttribute("download", fileName)
       window.document.body.appendChild(link)
       link.click()
-      
+
       // Clean up
       setTimeout(() => {
         window.document.body.removeChild(link)

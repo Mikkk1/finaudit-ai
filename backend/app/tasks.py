@@ -138,9 +138,6 @@ def save_ai_analysis(document_id: int, ai_analysis: Dict[str, Any], file_type: s
         db.close()
 
 def process_pdf(file_path: str, document_id: int):
-    """
-    Extracts text from a PDF file and sends it to generative AI for analysis.
-    """
     try:
         text = ""
         with fitz.open(file_path) as doc:
@@ -148,7 +145,7 @@ def process_pdf(file_path: str, document_id: int):
                 text += page.get_text()
         
         parsed_content = parse_content_with_genai(text, 'pdf')
-        save_extracted_content(document_id, parsed_content, 'pdf')
+        save_extracted_content(document_id, parsed_content, 'pdf', raw_content=text)
         
         ai_analysis = generate_ai_analysis(parsed_content, 'pdf')
         save_ai_analysis(document_id, ai_analysis, 'pdf')
@@ -157,15 +154,13 @@ def process_pdf(file_path: str, document_id: int):
         save_extracted_content(document_id, {"error": f"Failed to process PDF: {e}"}, 'pdf')
 
 def process_excel(file_path: str, document_id: int):
-    """
-    Extracts data from an Excel file and sends it to generative AI for analysis.
-    """
     try:
         df = pd.read_excel(file_path)
         content = df.to_json(orient="records")
+        raw_content = df.to_string()  # Get raw string representation
         
         parsed_content = parse_content_with_genai(content, 'excel')
-        save_extracted_content(document_id, parsed_content, 'excel')
+        save_extracted_content(document_id, parsed_content, 'excel', raw_content=raw_content)
         
         ai_analysis = generate_ai_analysis(parsed_content, 'excel')
         save_ai_analysis(document_id, ai_analysis, 'excel')
@@ -174,15 +169,13 @@ def process_excel(file_path: str, document_id: int):
         save_extracted_content(document_id, {"error": f"Failed to process Excel: {e}"}, 'excel')
 
 def process_csv(file_path: str, document_id: int):
-    """
-    Extracts data from a CSV file and sends it to generative AI for analysis.
-    """
     try:
         df = pd.read_csv(file_path)
         content = df.to_json(orient="records")
+        raw_content = df.to_string()  # Get raw string representation
         
         parsed_content = parse_content_with_genai(content, 'csv')
-        save_extracted_content(document_id, parsed_content, 'csv')
+        save_extracted_content(document_id, parsed_content, 'csv', raw_content=raw_content)
         
         ai_analysis = generate_ai_analysis(parsed_content, 'csv')
         save_ai_analysis(document_id, ai_analysis, 'csv')
@@ -191,13 +184,10 @@ def process_csv(file_path: str, document_id: int):
         save_extracted_content(document_id, {"error": f"Failed to process CSV: {e}"}, 'csv')
 
 def process_image(file_path: str, document_id: int):
-    """
-    Extracts text from an image using OCR and sends it to generative AI for analysis.
-    """
     try:
         text = pytesseract.image_to_string(Image.open(file_path))
         parsed_content = parse_content_with_genai(text, 'image')
-        save_extracted_content(document_id, parsed_content, 'image')
+        save_extracted_content(document_id, parsed_content, 'image', raw_content=text)
         
         ai_analysis = generate_ai_analysis(parsed_content, 'image')
         save_ai_analysis(document_id, ai_analysis, 'image')
@@ -205,19 +195,21 @@ def process_image(file_path: str, document_id: int):
         print(f"Error processing image file: {e}")
         save_extracted_content(document_id, {"error": f"Failed to process image: {e}"}, 'image')
 
-def save_extracted_content(document_id: int, content: Union[Dict[str, Any], list], file_type: str):
+def save_extracted_content(document_id: int, content: Union[Dict[str, Any], list], file_type: str, raw_content: str = None):
     """
     Saves the extracted content and AI analysis to the database.
-    Works with both dictionary and list responses.
-    Updates the document title if the parsed content contains a title.
     """
     db = SessionLocal()
     try:
         document = db.query(Document).filter(Document.id == document_id).first()
         if document:
+            # Save raw content if provided
+            if raw_content is not None:
+                document.raw_content = raw_content
+            
             # Ensure the content is properly formatted as JSON
             if isinstance(content, (dict, list)):
-                document.content = json.dumps(content, ensure_ascii=False)  # Save content as properly formatted JSON
+                document.content = json.dumps(content, ensure_ascii=False)
 
                 # Check if the parsed content contains a title and update the document title
                 if isinstance(content, dict) and "title" in content and "None" not in content["title"]:

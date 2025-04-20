@@ -10,12 +10,13 @@ import uuid
 import logging
 from datetime import datetime, timedelta
 from fastapi import HTTPException
-from app.models import Document as DocumentModel, DocumentMetadata, Workflow, DocumentWorkflow, Annotation, DocumentVersion, Activity, DocumentAIAnalysis, RelatedDocument
-from app.schemas.document import DocumentResponse  # Only import the Pydantic schema for response
+from app.models import Document as DocumentModel, DocumentMetadata, Workflow, DocumentWorkflow, Annotation, DocumentVersion, Activity, DocumentAIAnalysis, RelatedDocument,WorkflowExecutionHistory
+from app.schemas.document import DocumentResponse  
 from sqlalchemy import or_, desc
 from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 import json
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,6 @@ def parse_metadata(metadata: str) -> Dict[str, Any]:
     except json.JSONDecodeError as e:
         logger.error(f"Invalid metadata JSON: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid metadata format")
-
 def create_document(db: Session, file, metadata: str, current_user):
     file_location = None
     try:
@@ -132,7 +132,7 @@ def create_document(db: Session, file, metadata: str, current_user):
             document_id=db_document.id,
             version_number=1,
             content="Initial document version",
-            file_path=file_location,  # Store the file path in the initial version
+            file_path=file_location,
             created_at=datetime.utcnow()
         )
         db.add(initial_version)
@@ -144,15 +144,28 @@ def create_document(db: Session, file, metadata: str, current_user):
         ).first()
 
         if workflow:
+            # Create document workflow starting at step 2
             document_workflow = DocumentWorkflow(
                 document_id=db_document.id,
                 workflow_id=workflow.id,
-                current_step=1,
+                current_step=2,  # Start at step 2 (Review)
                 status="in_progress",
                 started_at=datetime.utcnow(),
                 timeout_at=datetime.utcnow() + timedelta(hours=24)
             )
             db.add(document_workflow)
+            
+            # Create execution history record for the completed upload step
+            upload_history = WorkflowExecutionHistory(
+                document_workflow_id=document_workflow.id,
+                step_number=1,  # Upload step
+                action="Completed Upload",
+                performed_by=current_user.id,
+                performed_at=datetime.utcnow(),
+                notes="Document uploaded successfully",
+                status="completed"
+            )
+            db.add(upload_history)
         
         db.commit()
         return db_document
@@ -291,6 +304,11 @@ def get_document(db: Session, document_id: int, current_user):
         print('Content:', content)
     except json.JSONDecodeError:
         content = {}  # Fallback to an empty dictionary if JSON is invalid
+    
+    try:
+        raw_content = document.raw_content if document.raw_content else ''
+    except json.JSONDecodeError:
+        raw_content = ''
 
     # Use the SQLAlchemy model for the query
     metadata = db.query(DocumentMetadata).filter(
@@ -414,7 +432,8 @@ def get_document(db: Session, document_id: int, current_user):
         "activityLog": activities_list,
         "aiAnalysis": [ai_analysis_dict],  # Wrap the AI analysis in a list to match the frontend's expected format
         "relatedDocuments": related_documents_list,
-        "content": content  # Send the parsed content to the frontend
+        "content": content,
+        "raw_content": raw_content
     }
 
 def get_document_content(db: Session, document_id: int, current_user):

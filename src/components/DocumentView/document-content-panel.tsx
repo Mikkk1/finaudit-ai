@@ -1,30 +1,51 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { FileText, Edit2, Save, X, AlertTriangle } from "lucide-react"
+import { FileText, Edit2, Save, X, AlertTriangle, Code } from "lucide-react"
 import axios from "axios"
 
 interface DocumentContentPanelProps {
+  documentId: string
   document: {
     id: number | string
     title: string
-    content?: any
   }
 }
 
-export default function DocumentContentPanel({ document }: DocumentContentPanelProps) {
+export default function DocumentContentPanel({ documentId, document }: DocumentContentPanelProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<"parsed" | "raw">("parsed")
+  const [documentContent, setDocumentContent] = useState<{
+    content?: any
+    raw_content?: string
+  }>({})
 
+  // Fetch document content when the component mounts or documentId changes
   useEffect(() => {
-    if (document && document.content) {
-      setEditedContent(document.content)
-    } else {
-      setEditedContent({})
+    const fetchDocumentContent = async () => {
+      setLoading(true)
+      try {
+        const token = localStorage.getItem("token")
+        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/content-data`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        setDocumentContent(response.data)
+        setEditedContent(response.data.content || {})
+        setLoading(false)
+      } catch (err) {
+        console.error("Error fetching document content:", err)
+        setError("Failed to load document content")
+        setLoading(false)
+      }
     }
-  }, [document])
+
+    fetchDocumentContent()
+  }, [documentId])
 
   const handleSave = async () => {
     try {
@@ -35,7 +56,7 @@ export default function DocumentContentPanel({ document }: DocumentContentPanelP
       }
 
       await axios.patch(
-        `http://127.0.0.1:8000/documents/${document.id}/content`,
+        `http://127.0.0.1:8000/documents/${documentId}/content`,
         { content: editedContent },
         {
           headers: {
@@ -43,6 +64,12 @@ export default function DocumentContentPanel({ document }: DocumentContentPanelP
           },
         },
       )
+
+      // Update the local state with the new content
+      setDocumentContent((prev) => ({
+        ...prev,
+        content: editedContent,
+      }))
 
       setIsEditing(false)
       setError(null)
@@ -55,7 +82,7 @@ export default function DocumentContentPanel({ document }: DocumentContentPanelP
   }
 
   const handleCancel = () => {
-    setEditedContent(document.content || {})
+    setEditedContent(documentContent.content || {})
     setIsEditing(false)
   }
 
@@ -184,10 +211,10 @@ export default function DocumentContentPanel({ document }: DocumentContentPanelP
 
   // Function to directly render array content
   const renderArrayContent = (arrayContent: any[]) => {
-    if (arrayContent.length === 0) return null;
-    
+    if (arrayContent.length === 0) return null
+
     // For a single item in the array, display it directly
-    if (arrayContent.length === 1 && typeof arrayContent[0] === 'object') {
+    if (arrayContent.length === 1 && typeof arrayContent[0] === "object") {
       return (
         <div className="grid gap-6">
           {Object.entries(arrayContent[0]).map(([key, value]) => (
@@ -197,7 +224,9 @@ export default function DocumentContentPanel({ document }: DocumentContentPanelP
             >
               <div className="flex flex-col gap-2">
                 <div className="flex items-center">
-                  <span className="text-sm font-medium text-slate-gray uppercase tracking-wide">{key.toUpperCase()}</span>
+                  <span className="text-sm font-medium text-slate-gray uppercase tracking-wide">
+                    {key.toUpperCase()}
+                  </span>
                 </div>
                 <div className="w-full">
                   <div className="text-dark-text font-medium">{String(value)}</div>
@@ -206,27 +235,31 @@ export default function DocumentContentPanel({ document }: DocumentContentPanelP
             </div>
           ))}
         </div>
-      );
+      )
     }
-    
+
     // For multiple items, render the list
     return (
       <div className="grid gap-6">
         {arrayContent.map((item, index) => (
-          <div key={index} className="group bg-primary-bg rounded-lg p-4 transition-all duration-200 hover:bg-hover-state">
+          <div
+            key={index}
+            className="group bg-primary-bg rounded-lg p-4 transition-all duration-200 hover:bg-hover-state"
+          >
             <h4 className="font-medium mb-4">Item {index + 1}</h4>
-            {typeof item === 'object' && 
+            {typeof item === "object" &&
               Object.entries(item).map(([key, value]) => (
                 <div key={key} className="mb-2">
-                  <span className="text-sm font-medium text-slate-gray uppercase tracking-wide">{key.toUpperCase()}:</span>
+                  <span className="text-sm font-medium text-slate-gray uppercase tracking-wide">
+                    {key.toUpperCase()}:
+                  </span>
                   <div className="ml-4 text-dark-text">{String(value)}</div>
                 </div>
-              ))
-            }
+              ))}
           </div>
         ))}
       </div>
-    );
+    )
   }
 
   return (
@@ -235,6 +268,25 @@ export default function DocumentContentPanel({ document }: DocumentContentPanelP
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold text-white">Document Content</h3>
           <div className="flex gap-2">
+            {/* Add view mode toggle */}
+            <div className="flex items-center space-x-2 mr-4">
+              <button
+                onClick={() => setViewMode("parsed")}
+                className={`px-3 py-1 rounded-md ${viewMode === "parsed" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+              >
+                <FileText className="h-4 w-4 inline mr-1" />
+                Parsed
+              </button>
+              <button
+                onClick={() => setViewMode("raw")}
+                className={`px-3 py-1 rounded-md ${viewMode === "raw" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+              >
+                <Code className="h-4 w-4 inline mr-1" />
+                Raw
+              </button>
+            </div>
+
+            {/* Keep existing edit/save buttons */}
             {isEditing ? (
               <>
                 <button
@@ -275,7 +327,6 @@ export default function DocumentContentPanel({ document }: DocumentContentPanelP
                   const newContent = JSON.parse(e.target.value)
                   setEditedContent(newContent)
                 } catch (error) {
-                  // If JSON is invalid, just store as string
                   setEditedContent(e.target.value)
                 }
               }}
@@ -287,13 +338,18 @@ export default function DocumentContentPanel({ document }: DocumentContentPanelP
               {`{"key": {"nestedKey": "value"}}`} for nested objects.
             </p>
           </div>
+        ) : viewMode === "raw" ? (
+          <div className="bg-primary-bg rounded-lg p-4">
+            <pre className="whitespace-pre-wrap font-mono text-sm text-dark-text">
+              {documentContent.raw_content || "No raw content available"}
+            </pre>
+          </div>
         ) : (
           <>
-            {/* For array content */}
+            {/* Keep existing parsed content rendering */}
             {Array.isArray(editedContent) ? (
               renderArrayContent(editedContent)
             ) : (
-              /* For object content */
               <div className="grid gap-6">
                 {Object.entries(editedContent).map(([key, value]) => (
                   <div
@@ -302,7 +358,9 @@ export default function DocumentContentPanel({ document }: DocumentContentPanelP
                   >
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center">
-                        <span className="text-sm font-medium text-slate-gray uppercase tracking-wide">{key.toUpperCase()}</span>
+                        <span className="text-sm font-medium text-slate-gray uppercase tracking-wide">
+                          {key.toUpperCase()}
+                        </span>
                       </div>
                       <div className="w-full">
                         <div className="text-dark-text">{renderValue(key, value)}</div>

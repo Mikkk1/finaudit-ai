@@ -1,4 +1,3 @@
-// VersionControlPanel.tsx
 "use client"
 
 import type React from "react"
@@ -19,6 +18,7 @@ import {
   Eye,
   History,
   CheckCircle2,
+  Loader2,
 } from "lucide-react"
 import axios from "axios"
 import Button from "../../components/ui/button.tsx"
@@ -31,39 +31,55 @@ interface DocumentVersion {
   id: number
   version_number: number
   content: string
-  file_path: string
+  file_path?: string
   created_at: string
 }
 
 interface VersionControlPanelProps {
+  documentId: string
   document: {
     id: number
-    versions: DocumentVersion[]
   }
-  onVersionChange?: () => void
 }
 
-const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ document, onVersionChange }) => {
-  const [currentVersion, setCurrentVersion] = useState<DocumentVersion | null>(
-    document.versions.length > 0 ? document.versions[0] : null,
-  )
+const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ documentId, document }) => {
+  const [currentVersion, setCurrentVersion] = useState<DocumentVersion | null>(null)
   const [isNewVersionModalOpen, setIsNewVersionModalOpen] = useState(false)
   const [newVersionNotes, setNewVersionNotes] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [versions, setVersions] = useState<DocumentVersion[]>(document.versions || [])
+  const [versions, setVersions] = useState<DocumentVersion[]>([])
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"changes" | "versions">("changes")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (document && document.versions) {
-      setVersions(document.versions)
-      if (document.versions.length > 0 && !currentVersion) {
-        setCurrentVersion(document.versions[0])
+    const fetchVersions = async () => {
+      setLoading(true)
+      try {
+        const token = localStorage.getItem("token")
+        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/versions`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        const fetchedVersions = response.data.versions || []
+        setVersions(fetchedVersions)
+        if (fetchedVersions.length > 0) {
+          setCurrentVersion(fetchedVersions[0])
+        }
+        setLoading(false)
+      } catch (err) {
+        console.error("Error fetching versions:", err)
+        setError("Failed to load document versions")
+        setLoading(false)
       }
     }
-  }, [document])
+
+    fetchVersions()
+  }, [documentId])
 
   const navigateVersion = (direction: "prev" | "next") => {
     if (!currentVersion) return
@@ -109,7 +125,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ document, onV
         formData.append("file", selectedFile)
         formData.append("notes", newVersionNotes)
 
-        response = await axios.post(`http://127.0.0.1:8000/documents/${document.id}/versions/file`, formData, {
+        response = await axios.post(`http://127.0.0.1:8000/documents/${documentId}/versions/file`, formData, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
@@ -117,7 +133,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ document, onV
         })
       } else {
         response = await axios.post(
-          `http://127.0.0.1:8000/documents/${document.id}/versions`,
+          `http://127.0.0.1:8000/documents/${documentId}/versions`,
           { content: newVersionNotes },
           {
             headers: {
@@ -143,10 +159,6 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ document, onV
         setNewVersionNotes("")
         setSelectedFile(null)
         setIsNewVersionModalOpen(false)
-
-        if (onVersionChange) {
-          onVersionChange()
-        }
       }
     } catch (error) {
       console.error("Error creating new version:", error)
@@ -159,6 +171,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ document, onV
       setIsSubmitting(false)
     }
   }
+
   const handleViewVersion = async (version: DocumentVersion) => {
     try {
       const token = localStorage.getItem("token")
@@ -172,7 +185,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ document, onV
       }
 
       // Create a URL for viewing the version content
-      const url = `http://127.0.0.1:8000/documents/${document.id}/versions/${version.id}/content`
+      const url = `http://127.0.0.1:8000/documents/${documentId}/versions/${version.id}/content`
 
       // Fetch the content with the token in the headers
       const response = await fetch(url, {
@@ -213,7 +226,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ document, onV
       }
 
       // Create a URL for downloading the version content
-      const url = `http://127.0.0.1:8000/documents/${document.id}/versions/${version.id}/download`
+      const url = `http://127.0.0.1:8000/documents/${documentId}/versions/${version.id}/download`
 
       // Fetch the file with the token in the headers
       const response = await fetch(url, {
@@ -231,7 +244,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ document, onV
 
       // Get the filename from the Content-Disposition header
       const contentDisposition = response.headers.get("Content-Disposition")
-      let filename = `${document.id}_v${version.version_number}`
+      let filename = `${documentId}_v${version.version_number}`
 
       if (contentDisposition) {
         // Extract filename from Content-Disposition header
@@ -281,6 +294,45 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ document, onV
         variant: "destructive",
       })
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-fadeIn transition-all duration-300 border border-[#E2E8F0]">
+        <div className="bg-gradient-to-r from-[#003366] to-[#004D99] px-6 py-5">
+          <h3 className="text-xl font-semibold text-white flex items-center">
+            <Shield className="mr-2 h-5 w-5" />
+            Version History
+          </h3>
+        </div>
+        <div className="p-8 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#003366]" />
+          <p className="mt-4 text-[#64748B]">Loading version history...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-fadeIn transition-all duration-300 border border-[#E2E8F0]">
+        <div className="bg-gradient-to-r from-[#003366] to-[#004D99] px-6 py-5">
+          <h3 className="text-xl font-semibold text-white flex items-center">
+            <Shield className="mr-2 h-5 w-5" />
+            Version History
+          </h3>
+        </div>
+        <div className="p-8 text-center text-red-500">
+          <p>{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (!versions || versions.length === 0) {
@@ -621,7 +673,9 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ document, onV
                     {versions.map((version) => (
                       <tr
                         key={version.id}
-                        className={`hover:bg-[#F8FAFC] transition-colors ${currentVersion?.id === version.id ? "bg-[#F1F5F9]" : ""}`}
+                        className={`hover:bg-[#F8FAFC] transition-colors ${
+                          currentVersion?.id === version.id ? "bg-[#F1F5F9]" : ""
+                        }`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">

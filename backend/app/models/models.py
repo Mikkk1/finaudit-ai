@@ -73,6 +73,7 @@ class Document(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True, nullable=False)
     content = Column(JSON, nullable=True)
+    raw_content = Column(Text, nullable=True)  # Add this line for raw content
     file_path = Column(String, nullable=False)
     file_type = Column(String, nullable=False)
     file_size = Column(Float, nullable=False)
@@ -81,7 +82,7 @@ class Document(Base):
     is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    
     owner = relationship("User")
     company = relationship("Company", back_populates="documents")
     versions = relationship("DocumentVersion", back_populates="document")

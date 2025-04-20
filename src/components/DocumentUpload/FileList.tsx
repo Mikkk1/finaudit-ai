@@ -9,6 +9,10 @@ interface FileListProps {
 }
 
 const FileList: React.FC<FileListProps> = ({ files, onPreview, onDelete }) => {
+  if (files.length === 0) {
+    return null // Or you can return a message like "No files uploaded"
+  }
+
   return (
     <div className="mt-8">
       <h2 className="text-2xl font-semibold text-navy-blue mb-4">Uploaded Files</h2>
@@ -47,4 +51,3 @@ const FileList: React.FC<FileListProps> = ({ files, onPreview, onDelete }) => {
 }
 
 export default FileList
-

@@ -21,21 +21,22 @@ interface DocumentViewProps {
 }
 
 const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
-  const [document, setDocument] = useState(null)
+  const [documentBasic, setDocumentBasic] = useState<any>(null)
   const [activeTab, setActiveTab] = useState("preview")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchDocument = async () => {
+  // Fetch only basic document information on initial load
+  const fetchDocumentBasic = async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem("token") // Retrieve the token from localStorage
-      const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}`, {
+      const token = localStorage.getItem("token")
+      const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/basic`, {
         headers: {
-          Authorization: `Bearer ${token}`, // Include the bearer token in the request header
+          Authorization: `Bearer ${token}`,
         },
       })
-      setDocument(response.data)
+      setDocumentBasic(response.data)
       setIsLoading(false)
     } catch (err) {
       console.error("Error fetching document:", err)
@@ -45,13 +46,8 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
   }
 
   useEffect(() => {
-    fetchDocument()
+    fetchDocumentBasic()
   }, [documentId])
-
-  // Function to refresh document data after updates
-  const refreshDocument = () => {
-    fetchDocument()
-  }
 
   const tabs = [
     { id: "preview", label: "Preview" },
@@ -91,7 +87,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
     )
   }
 
-  if (!document) {
+  if (!documentBasic) {
     return null
   }
 
@@ -100,9 +96,9 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
       <div className="bg-white w-full max-w-7xl mx-auto rounded-lg shadow-xl overflow-hidden">
         <div className="px-4 py-5 sm:px-6 bg-gray-800 text-white flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">{document.title}</h1>
+            <h1 className="text-2xl font-bold">{documentBasic.title}</h1>
             <p className="mt-1 text-sm">
-              {document.file_type} - {document.file_size}
+              {documentBasic.file_type} - {documentBasic.file_size}
             </p>
           </div>
           <button onClick={onClose} className="text-white hover:text-gray-300 transition-colors">
@@ -127,18 +123,18 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
           </nav>
         </div>
         <div className="p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
-          {activeTab === "preview" && <DocumentPreview document={document} />}
-          {activeTab === "content" && <DocumentContentPanel document={document} />}
-          {activeTab === "metadata" && document.metadata && <MetadataPanel document={document} />}
-          {activeTab === "ai-analysis" && <AIAnalysisPanel document={document} />}
-          {activeTab === "annotations" && <AnnotationPanel document={document} />}
-          {activeTab === "versions" && <VersionControlPanel document={document} onVersionChange={refreshDocument} />}
-          {activeTab === "related" && <RelatedDocumentsPanel document={document} />}
-          {activeTab === "workflow" && <WorkflowPanel document={document} />}
-          {activeTab === "activity" && <ActivityLogPanel document={document} />}
+          {activeTab === "preview" && <DocumentPreview documentId={documentId} document={documentBasic} />}
+          {activeTab === "content" && <DocumentContentPanel documentId={documentId} document={documentBasic} />}
+          {activeTab === "metadata" && <MetadataPanel documentId={documentId} document={documentBasic} />}
+          {activeTab === "ai-analysis" && <AIAnalysisPanel documentId={documentId} document={documentBasic} />}
+          {activeTab === "annotations" && <AnnotationPanel documentId={documentId} document={documentBasic} />}
+          {activeTab === "versions" && <VersionControlPanel documentId={documentId} document={documentBasic} />}
+          {activeTab === "related" && <RelatedDocumentsPanel documentId={documentId} document={documentBasic} />}
+          {activeTab === "workflow" && <WorkflowPanel documentId={documentId} document={documentBasic} />}
+          {activeTab === "activity" && <ActivityLogPanel documentId={documentId} document={documentBasic} />}
         </div>
         <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-          <DocumentActions document={document} onActionComplete={refreshDocument} />
+          <DocumentActions documentId={documentId} document={documentBasic} />
         </div>
       </div>
     </div>

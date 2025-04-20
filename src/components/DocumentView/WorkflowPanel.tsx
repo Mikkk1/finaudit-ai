@@ -1,15 +1,14 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import { CheckCircle, Circle, AlertCircle, ChevronRight } from "lucide-react"
+import { useState, useEffect } from "react"
+import { CheckCircle, Circle, AlertCircle, ChevronRight, Loader2 } from "lucide-react"
 import axios from "axios"
 
-// Fixed imports to match the correct file paths
 import Button from "../../components/ui/button.tsx"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.tsx"
 import Textarea from "../../components/ui/textarea.tsx"
-import { toast } from "../../utils/toast.tsx" // Adjusted path based on the new file location
+import { toast } from "../../utils/toast.tsx"
 
 interface WorkflowStep {
   id: number
@@ -39,20 +38,46 @@ interface DocumentWorkflow {
 }
 
 interface WorkflowPanelProps {
+  documentId: string
   document: {
     id: number
-    workflows: DocumentWorkflow[]
   }
 }
 
-const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
+const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ documentId, document }) => {
   const [isActionModalOpen, setIsActionModalOpen] = useState(false)
   const [actionType, setActionType] = useState<"approve" | "reject" | null>(null)
   const [notes, setNotes] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [activeWorkflow, setActiveWorkflow] = useState<DocumentWorkflow | null>(
-    document.workflows && document.workflows.length > 0 ? document.workflows[0] : null,
-  )
+  const [activeWorkflow, setActiveWorkflow] = useState<DocumentWorkflow | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchWorkflows = async () => {
+      setLoading(true)
+      try {
+        const token = localStorage.getItem("token")
+        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/workflows`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        const workflows = response.data.workflows || []
+        if (workflows.length > 0) {
+          setActiveWorkflow(workflows[0])
+        }
+        setLoading(false)
+      } catch (err) {
+        console.error("Error fetching workflows:", err)
+        setError("Failed to load document workflows")
+        setLoading(false)
+      }
+    }
+
+    fetchWorkflows()
+  }, [documentId])
 
   // Define workflow steps based on current step in the active workflow
   const workflowSteps = [
@@ -89,21 +114,21 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
           icon: <CheckCircle className="h-6 w-6 text-emerald-500" />,
           textColor: "text-emerald-600",
           bgColor: "bg-emerald-100",
-          borderColor: "border-emerald-200"
+          borderColor: "border-emerald-200",
         }
       case "current":
         return {
           icon: <Circle className="h-6 w-6 text-blue-500" />,
           textColor: "text-blue-600",
           bgColor: "bg-blue-100",
-          borderColor: "border-blue-200"
+          borderColor: "border-blue-200",
         }
       default:
         return {
           icon: <Circle className="h-6 w-6 text-gray-400" />,
           textColor: "text-gray-500",
           bgColor: "bg-gray-100",
-          borderColor: "border-gray-200"
+          borderColor: "border-gray-200",
         }
     }
   }
@@ -121,7 +146,7 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
     try {
       const token = localStorage.getItem("token")
       const response = await axios.post(
-        `http://127.0.0.1:8000/documents/${document.id}/workflow/action`,
+        `http://127.0.0.1:8000/documents/${documentId}/workflow/action`,
         {
           workflow_id: activeWorkflow.id,
           action: actionType,
@@ -157,6 +182,40 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-fadeIn transition-all duration-300">
+        <div className="bg-gradient-to-r from-indigo-600 to-blue-500 px-6 py-5">
+          <h3 className="text-xl font-semibold text-white">Document Workflow</h3>
+        </div>
+        <div className="p-8 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-indigo-600" />
+          <p className="mt-4 text-gray-500">Loading workflow information...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-fadeIn transition-all duration-300">
+        <div className="bg-gradient-to-r from-indigo-600 to-blue-500 px-6 py-5">
+          <h3 className="text-xl font-semibold text-white">Document Workflow</h3>
+        </div>
+        <div className="p-8 text-center text-red-500">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+          <p>{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (!activeWorkflow) {
     return (
       <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-fadeIn transition-all duration-300">
@@ -176,7 +235,7 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-fadeIn transition-all duration-300">
-      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 px-6 py-5">
+      <div className="bg-gradient-to-r from-navy-blue to-[#004D99] px-6 py-5">
         <h3 className="text-xl font-semibold text-white">Document Workflow</h3>
       </div>
 
@@ -212,7 +271,9 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
                 <li key={step.id} className="relative">
                   <div className="flex items-center">
                     {/* Status Icon */}
-                    <div className={`relative z-10 flex items-center justify-center w-16 h-16 rounded-full ${bgColor} ${borderColor} border-2 shadow-md transition-all duration-300`}>
+                    <div
+                      className={`relative z-10 flex items-center justify-center w-16 h-16 rounded-full ${bgColor} ${borderColor} border-2 shadow-md transition-all duration-300`}
+                    >
                       {icon}
                     </div>
 
@@ -237,8 +298,8 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
                             >
                               Approve
                             </Button>
-                            <Button 
-                              onClick={() => openActionModal("reject")} 
+                            <Button
+                              onClick={() => openActionModal("reject")}
                               className="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 py-2"
                             >
                               Reject
@@ -269,7 +330,9 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
                     </div>
                     <p className="text-sm text-gray-600 mt-1">Step {history.step_number}</p>
                     {history.notes && (
-                      <p className="text-sm mt-3 italic bg-white p-3 rounded border border-gray-200">"{history.notes}"</p>
+                      <p className="text-sm mt-3 italic bg-white p-3 rounded border border-gray-200">
+                        "{history.notes}"
+                      </p>
                     )}
                     <span
                       className={`inline-flex items-center mt-3 px-3 py-1 text-xs font-medium rounded-full ${
@@ -293,10 +356,10 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
       {/* Enhanced Action Modal */}
       <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
         <DialogContent className="sm:max-w-md rounded-xl shadow-xl bg-white overflow-hidden border-0">
-          <div className={`absolute inset-x-0 top-0 h-1 ${
-            actionType === "approve" ? "bg-emerald-500" : "bg-rose-500"
-          }`}></div>
-          
+          <div
+            className={`absolute inset-x-0 top-0 h-1 ${actionType === "approve" ? "bg-emerald-500" : "bg-rose-500"}`}
+          ></div>
+
           <DialogHeader className="border-b pb-4">
             <DialogTitle className="text-xl font-semibold flex items-center">
               {actionType === "approve" ? (
@@ -322,15 +385,15 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
               className="min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
             />
             <p className="text-xs text-gray-500 mt-2">
-              {actionType === "approve" 
+              {actionType === "approve"
                 ? "Your approval will move this document to the next step in the workflow."
                 : "Your rejection will return this document to the previous owner for revision."}
             </p>
           </div>
 
           <DialogFooter className="gap-3 sm:gap-0 border-t pt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsActionModalOpen(false)}
               className="border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
             >
@@ -340,8 +403,8 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ document }) => {
               onClick={handleWorkflowAction}
               disabled={isSubmitting}
               className={`px-5 font-medium ${
-                actionType === "approve" 
-                  ? "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700" 
+                actionType === "approve"
+                  ? "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
                   : "bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700"
               } text-white shadow-md hover:shadow-lg transition-all duration-300 rounded-lg`}
             >
