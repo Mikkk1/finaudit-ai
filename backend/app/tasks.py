@@ -10,7 +10,11 @@ import google.generativeai as genai
 from typing import Dict, Any, Union
 from datetime import datetime
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+import platform
+if platform.system() == 'Linux':
+    pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
+else:
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 API_KEY = "AIzaSyC9kRGz-cMVvEIXPpfsySl_eZt3OzgVpgE"  # Replace with your actual API key
 
