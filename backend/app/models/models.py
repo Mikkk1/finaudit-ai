@@ -170,7 +170,7 @@ class WorkflowStep(Base):
     workflow_id = Column(Integer, ForeignKey("workflows.id"))
     step_number = Column(Integer)
     action = Column(String)
-    role_required = Column(Enum('admin', 'manager', 'employee', 'auditor'))
+    role_required = Column(Enum('admin', 'manager', 'employee', 'auditor',name="role_required_enum"))
     timeout_duration = Column(Integer, nullable=True)  # Timeout duration in hours
     is_parallel = Column(Boolean, default=False)  # Whether this step can be executed in parallel
 
@@ -183,7 +183,7 @@ class DocumentWorkflow(Base):
     document_id = Column(Integer, ForeignKey("documents.id"))
     workflow_id = Column(Integer, ForeignKey("workflows.id"))
     current_step = Column(Integer)
-    status = Column(Enum("in_progress", "completed", "rejected", "timed_out"))
+    status = Column(Enum("in_progress", "completed", "rejected", "timed_out",name="status_enum"))
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     rejected_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # User who rejected the workflow
@@ -205,7 +205,7 @@ class WorkflowExecutionHistory(Base):
     performed_by = Column(Integer, ForeignKey("users.id"))  # User who performed the step
     performed_at = Column(DateTime, default=datetime.utcnow)
     notes = Column(Text, nullable=True)  # Optional notes for the step
-    status = Column(Enum("completed", "rejected", "timed_out"))  # Status of the step
+    status = Column(Enum("completed", "rejected", "timed_out",name="status_enum"))  # Status of the step
 
     document_workflow = relationship("DocumentWorkflow", back_populates="execution_history")
     user = relationship("User")

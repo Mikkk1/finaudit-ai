@@ -3,6 +3,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import document_router, auth_router, employee_router, company_router, user_router, workflow_router, version_router,dashboard_router
+from app.database import Base, engine
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="FinAudit AI API")
 
