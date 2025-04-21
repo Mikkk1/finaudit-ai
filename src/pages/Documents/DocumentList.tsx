@@ -47,7 +47,7 @@ const DocumentList: React.FC = () => {
 
   const axiosInstance = useMemo(() => {
     const instance = axios.create({
-      baseURL: "http://127.0.0.1:8000",
+      baseURL: "https://finaudit.live/api",
       headers: {
         "Content-Type": "application/json",
       },
@@ -85,7 +85,7 @@ const DocumentList: React.FC = () => {
     setError(null)
 
     try {
-      const response = await axiosInstance.get("/documents", {
+      const response = await axiosInstance.get("https://finaudit.live/api/documents", {
         params: {
           page: currentPage,
           limit: itemsPerPage,
@@ -158,7 +158,7 @@ const DocumentList: React.FC = () => {
 
   const handleBatchOperation = async (operation: string) => {
     try {
-      await axiosInstance.post("/documents/batch", {
+      await axiosInstance.post("https://finaudit.live/api/documents/batch", {
         operation,
         documentIds: selectedDocuments,
       })
