@@ -12,7 +12,7 @@ import DocumentAnalysis from "./pages/Documents/DocumentAnalysis.tsx";
 import DocumentAutomation from "./pages/Documents/DocumentAutomation.tsx";
 import UserSettings from "./pages/Settings/UserSettings.tsx";
 import SystemSettings from "./pages/Settings/SystemSettings.tsx";
-
+import Home from "./pages/page.tsx";
 // Create a QueryClient instance
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,16 +37,7 @@ const App: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route
-            path="/"
-            element={
-              <PrivateRoute
-                element={
-                  <Layout>
-                    <DocumentList />
-                  </Layout>
-                }
-              />
-            }
+            path="/" element={<Home />}
           />
           <Route
             path="/dashboard"

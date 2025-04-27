@@ -746,7 +746,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ documentId, d
 
       {/* New Version Modal */}
       <Dialog open={isNewVersionModalOpen} onOpenChange={setIsNewVersionModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-xl overflow-hidden shadow-xl border border-[#E2E8F0]">
+        <DialogContent className="sm:max-w-md rounded-xl overflow-hidden shadow-xl border border-[#E2E8F0] bg-white">
           <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#F59E0B] to-[#D97706]"></div>
 
           <DialogHeader className="pb-4 border-b border-[#E2E8F0]">

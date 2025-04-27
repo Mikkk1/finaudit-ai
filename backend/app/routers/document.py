@@ -17,6 +17,8 @@ from app.schemas.document import Document
 from app.schemas.error import ErrorResponse
 from app.tasks import process_pdf, process_excel, process_csv, process_image
 import json
+import os
+import shutil
 
 router = APIRouter()
 
@@ -493,23 +495,27 @@ async def add_version_route(
 
 # Add version with file endpoint
 @router.post("/documents/{document_id}/versions/file", response_model=Dict[str, Any])
-async def add_version_with_file_route(
+async def create_document_version_with_file(
     document_id: int,
     file: UploadFile = File(...),
     notes: str = Form(""),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    document = db.query(DocumentModel).filter(
-        DocumentModel.id == document_id,
-        DocumentModel.company_id == current_user.company_id,
-        DocumentModel.is_deleted == False
-    ).first()
-
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
+    """
+    Create a new version of a document with a file upload
+    """
     try:
+        # Check if document exists and user has access
+        document = db.query(DocumentModel).filter(
+            DocumentModel.id == document_id,
+            DocumentModel.company_id == current_user.company_id,
+            DocumentModel.is_deleted == False
+        ).first()
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
         # Get the latest version number
         latest_version = db.query(DocumentVersion).filter(
             DocumentVersion.document_id == document_id
@@ -519,36 +525,40 @@ async def add_version_with_file_route(
         if latest_version:
             new_version_number = latest_version.version_number + 1
         
-        # Save the file
-        file_path = f"uploads/versions/{document_id}_{new_version_number}_{file.filename}"
-        with open(file_path, "wb") as buffer:
-            buffer.write(await file.read())
+        # Save the previous version's file path before updating
+        previous_file_path = document.file_path
         
-        # Create new version
+        # Save the new file
+        upload_dir = os.path.dirname(document.file_path)
+        file_extension = os.path.splitext(document.file_path)[1]
+        new_filename = f"{os.path.splitext(os.path.basename(document.file_path))[0]}_v{new_version_number}{file_extension}"
+        new_file_path = os.path.join(upload_dir, new_filename)
+        
+        try:
+            with open(new_file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        finally:
+            file.file.close()
+        
+        # Create new version record with the previous file path
         new_version = DocumentVersion(
             document_id=document_id,
             version_number=new_version_number,
             content=notes,
-            file_path=file_path,
+            file_path=previous_file_path,  # Store the previous file path in the version
             created_at=datetime.utcnow()
         )
+        
+        # Update the document with the new file path
+        document.file_path = new_file_path
+        document.updated_at = datetime.utcnow()
+        
         db.add(new_version)
         db.commit()
         db.refresh(new_version)
         
-        # Log the activity
-        activity = Activity(
-            action="add_version_with_file",
-            user_id=current_user.id,
-            document_id=document_id,
-            details={"type": "version_added", "version_number": new_version_number, "file_name": file.filename},
-            created_at=datetime.utcnow()
-        )
-        db.add(activity)
-        db.commit()
-        
         return {
-            "message": "Version with file added successfully",
+            "message": "Document version created successfully",
             "version": {
                 "id": new_version.id,
                 "version_number": new_version.version_number,
@@ -559,7 +569,10 @@ async def add_version_with_file_route(
         }
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to add version with file: {str(e)}")
+        print(f"Error creating document version with file: {str(e)}")
+        
+        raise HTTPException(status_code=500, detail=f"Failed to create document version: {str(e)}")
+
 
 # View version content endpoint
 @router.get("/documents/{document_id}/versions/{version_id}/content", responses={404: {"model": ErrorResponse}})
