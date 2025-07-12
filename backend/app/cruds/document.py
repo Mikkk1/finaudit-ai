@@ -17,7 +17,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 import json
 import traceback
-
+from sqlalchemy import String
 logger = logging.getLogger(__name__)
 
 # Configuration Constants
@@ -204,9 +204,11 @@ def list_documents(db: Session, current_user, page: int, limit: int, search: Opt
         )
 
         if search:
+            # Search in title and metadata values (as strings)
+            # For JSON content, we'll need to cast it to text for searching
             query = query.filter(or_(
                 DocumentModel.title.ilike(f"%{search}%"),
-                DocumentModel.content.ilike(f"%{search}%"),
+                DocumentModel.content.cast(String).ilike(f"%{search}%"),
                 DocumentMetadata.value.ilike(f"%{search}%")
             )).join(DocumentMetadata, isouter=True)
 

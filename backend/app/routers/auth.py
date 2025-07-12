@@ -24,11 +24,12 @@ SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 10080
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 class Token(BaseModel):
     access_token: str
     token_type: str
+    role: Optional[str] = None  # Include role in the token response
 
 class TokenData(BaseModel):
     username: Optional[str] = None
@@ -126,10 +127,19 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             )
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": user.username, "user_id": user.id, "company_id": user.company_id},
+            data={
+                "sub": user.username, 
+                "user_id": user.id, 
+                "company_id": user.company_id,
+                "role": user.role.value  # Add role to token
+            },
             expires_delta=access_token_expires
         )
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer",
+            "role": user.role.value  # Also return role in response
+        }
     except HTTPException as e:
         logger.error(f"HTTP exception during login: {str(e)}")
         raise
