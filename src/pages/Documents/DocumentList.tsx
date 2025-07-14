@@ -47,7 +47,7 @@ const DocumentList: React.FC = () => {
 
   const axiosInstance = useMemo(() => {
     const instance = axios.create({
-      baseURL: "https://finaudit.live/api",
+      baseURL: "http://127.0.0.1:8000",
       headers: {
         "Content-Type": "application/json",
       },
@@ -85,7 +85,7 @@ const DocumentList: React.FC = () => {
     setError(null)
 
     try {
-      const response = await axiosInstance.get("https://finaudit.live/api/documents", {
+      const response = await axiosInstance.get("http://127.0.0.1:8000/documents", {
         params: {
           page: currentPage,
           limit: itemsPerPage,
@@ -158,7 +158,7 @@ const DocumentList: React.FC = () => {
 
   const handleBatchOperation = async (operation: string) => {
     try {
-      await axiosInstance.post("https://finaudit.live/api/documents/batch", {
+      await axiosInstance.post("http://127.0.0.1:8000/documents/batch", {
         operation,
         documentIds: selectedDocuments,
       })
@@ -176,7 +176,7 @@ const DocumentList: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Section */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-3">

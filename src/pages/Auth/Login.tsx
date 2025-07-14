@@ -16,10 +16,11 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
+  
     try {
       const data = await login(username, password);
       localStorage.setItem("token", data.access_token);
+      localStorage.setItem("userRole", data.role);  // Store role
       navigate("/dashboard");
     } catch (error) {
       setError("Invalid username or password. Please try again.");

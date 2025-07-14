@@ -1,6 +1,6 @@
 import axios from "axios"
 
-const API_URL = "https://finaudit.live/api" // Replace with your API URL
+const API_URL = "http://127.0.0.1:8000" // Replace with your API URL
 
 const api = axios.create({
   baseURL: API_URL,

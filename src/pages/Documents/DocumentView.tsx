@@ -31,7 +31,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/basic`, {
+      const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/basic`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -93,7 +93,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({ documentId, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 overflow-y-auto">
-      <div className="bg-white w-full max-w-7xl mx-auto rounded-lg shadow-xl overflow-hidden">
+      <div className="bg-white w-full max-w-8xl mx-auto rounded-lg shadow-xl overflow-hidden">
         <div className="px-4 py-5 sm:px-6 bg-gray-800 text-white flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold">{documentBasic.title}</h1>
