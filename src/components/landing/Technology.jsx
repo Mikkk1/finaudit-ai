@@ -153,7 +153,7 @@ const Technology = () => {
             {Array(6).fill().map((_, i) => (
               <div key={i} className="flex items-center justify-center h-12 w-20 bg-white rounded-lg border border-[#E2E8F0] shadow-sm">
                 <img 
-                  src={`/api/placeholder/80/40`} 
+                  src={`http://127.0.0.1:8000/api/placeholder/80/40`} 
                   alt={`Tech Partner ${i+1}`}
                   className="max-h-6 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
                 />

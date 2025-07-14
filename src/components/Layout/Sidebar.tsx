@@ -1,107 +1,272 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  BarChart, 
-  Upload, 
-  List, 
-  Beaker, 
-  Zap, 
-  Settings
-} from 'lucide-react';
+"use client"
+
+import type React from "react"
+import { useLocation, useNavigate } from "react-router-dom"
+import {
+  LayoutDashboard,
+  FileText,
+  Upload,
+  BarChart3,
+  Settings,
+  Users,
+  ClipboardCheck,
+  TrendingUp,
+  Shield,
+  Plus,
+  CheckCircle,
+  List,
+  Eye
+} from "lucide-react"
 
 interface SidebarProps {
-  isExpanded?: boolean; // Made optional since we'll control it internally
+  isExpanded: boolean
+  onExpandToggle: (expanded: boolean) => void
+  isMobile: boolean
+  currentPath: string
 }
 
-const Sidebar: React.FC<SidebarProps> = () => {
-  const location = useLocation();
-  const [isHovered, setIsHovered] = useState(false);
+const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onExpandToggle, isMobile, currentPath }) => {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Get user role from localStorage
+  const userRole = localStorage.getItem("userRole");
 
   const menuItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: BarChart },
-    { name: 'Upload Document', path: '/documents/upload', icon: Upload },
-    { name: 'Document List', path: '/documents', icon: List },
-    { name: 'Document Analysis', path: '/documents/analysis', icon: Beaker },
-    { name: 'Document Automation', path: '/documents/automation', icon: Zap },
-    { name: 'Settings', path: '/settings/user', icon: Settings },
-  ];
+    // Dashboard
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      path: "/dashboard",
+      roles: ["admin", "manager", "employee", "auditor", "auditee"],
+    },
 
-  const isActive = (path: string) => location.pathname.startsWith(path);
+    // Audit Management Section
+    {
+      title: "Audit Management",
+      isSection: true,
+      roles: ["admin", "manager", "auditor", "auditee"],
+    },
+    {
+      title: "Company Audits",
+      icon: ClipboardCheck,
+      path: "/auditee/dashboard",
+      roles: ["admin", "manager", "auditee"],
+    },
+    {
+      title: "Auditor Dashboard",
+      icon: Shield,
+      path: "/auditor/dashboard",
+      roles: ["admin","auditor"],
+    },
+    {
+      title: "Auditee Dashboard",
+      icon: Shield,
+      path: "/auditee_dashboard",
+      roles: ["admin","auditor"],
+    },
+    {
+      title: "Create Audit",
+      icon: Plus,
+      path: "/audits/create",
+      roles: ["admin", "manager", "auditee"],
+    },
+    {
+      title: "Audit List",
+      icon: List,
+      path: "/audits/list",
+      roles: ["admin", "manager", "auditor", "auditee"],
+    },
+    {
+      title: "Auditor Directory",
+      icon: Users,
+      path: "/auditors",
+      roles: ["admin", "manager", "auditee"],
+    },
+    {
+      title: "Compliance Tracker",
+      icon: CheckCircle,
+      path: "/compliance",
+      roles: ["admin", "manager", "auditee"],
+    },
+    {
+      title: "Performance Analytics",
+      icon: TrendingUp,
+      path: "/auditors/performance",
+      roles: ["admin", "manager"],
+    },
+    {
+      title: "Document Submission",
+      icon: Upload,
+      path: "/audits/documents/submit",
+      roles: ["auditee", "employee","admin"],
+    },
+    {
+      title: "Document Review",
+      icon: Eye,
+      path: "/auditor/documents/review",
+      roles: ["auditor","admin"],
+    },
+    {
+      title: "Risk Management",
+      icon: TrendingUp,
+      path: "/risk",
+      roles: ["admin", "auditor", "employee"],
+    },
+
+    // Document Management Section
+    {
+      title: "Document Management",
+      isSection: true,
+      roles: ["admin", "manager", "employee", "auditor", "auditee"],
+    },
+    {
+      title: "Documents",
+      icon: FileText,
+      path: "/documents",
+      roles: ["admin", "manager", "employee", "auditor", "auditee"],
+    },
+    {
+      title: "Upload Documents",
+      icon: Upload,
+      path: "/documents/upload",
+      roles: ["admin", "manager", "employee", "auditee"],
+    },
+    {
+      title: "Document Analysis",
+      icon: BarChart3,
+      path: "/documents/analysis",
+      roles: ["admin", "manager", "auditor"],
+    },
+    {
+      title: "Automation",
+      icon: Settings,
+      path: "/documents/automation",
+      roles: ["admin", "manager"],
+    },
+
+    // Settings Section
+    {
+      title: "Settings",
+      isSection: true,
+      roles: ["admin", "manager", "employee", "auditor", "auditee"],
+    },
+    {
+      title: "User Settings",
+      icon: Settings,
+      path: "/settings/user",
+      roles: ["admin", "manager", "employee", "auditor", "auditee"],
+    },
+    {
+      title: "System Settings",
+      icon: Settings,
+      path: "/settings/system",
+      roles: ["admin"],
+    },
+  ]
+
+  // Filter menu items based on user role
+  const filteredMenuItems = menuItems.filter((item) => item.roles.includes(userRole))
+
+  const handleNavigation = (path: string) => {
+    navigate(path)
+    if (isMobile) {
+      onExpandToggle(false)
+    }
+  }
+
+  const isActive = (path: string) => {
+    if (path === "/dashboard") {
+      return currentPath === "/dashboard"
+    }
+    return currentPath.startsWith(path)
+  }
 
   return (
-    <aside
-      className={`bg-white border-r border-light-border shadow-card transition-all duration-300 ease-in-out
-        fixed left-0 top-16 h-[calc(100vh-4rem)] z-50
-        ${isHovered ? 'w-64' : 'w-16'}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+    <div
+      className={`
+      h-full bg-white border-r border-gray-200 flex flex-col
+      ${isExpanded ? "w-64" : "w-16"}
+      transition-all duration-300 ease-in-out
+    `}
     >
-      {/* Navigation Menu */}
-      <div className="p-3 pt-8">
-        <nav className="space-y-1">
-          {menuItems.map((item) => {
-            const isActiveRoute = isActive(item.path);
-            return (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={`flex items-center rounded-lg group relative overflow-hidden
-                  transition-all duration-300 ease-in-out
-                  ${isActiveRoute 
-                    ? 'bg-primary-bg text-navy-blue font-medium' 
-                    : 'text-slate-gray hover:bg-hover-state hover:text-navy-blue'
-                  }
-                  ${isHovered ? 'px-4 py-3' : 'px-3 py-3 justify-center'}`}
-              >
-                <div className={`flex items-center ${isHovered ? 'gap-3' : ''}`}>
-                  <item.icon 
-                    className={`w-5 h-5 transition-transform duration-300
-                      ${isActiveRoute ? 'text-navy-blue' : 'group-hover:text-navy-blue'}
-                      ${!isHovered && 'group-hover:scale-110'}`} 
-                  />
-                  <span
-                    className={`whitespace-nowrap transition-all duration-300
-                      ${isHovered ? 'opacity-100 ml-3' : 'opacity-0 w-0 hidden'}
-                      ${isActiveRoute ? 'text-navy-blue' : ''}`}
-                  >
-                    {item.name}
-                  </span>
-                </div>
-                
-                {/* Active Indicator */}
-                {isActiveRoute && (
-                  <div className="absolute left-0 top-0 h-full w-1 bg-soft-gold rounded-r" />
-                )}
-
-                {/* Tooltip for collapsed state */}
-                {!isHovered && (
-                  <div className="absolute left-full ml-2 px-2 py-1 bg-navy-blue text-white text-sm
-                    rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300
-                    pointer-events-none whitespace-nowrap z-50">
-                    {item.name}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+      {/* Logo Section */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center space-x-3">
+          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Shield className="h-5 w-5 text-white" />
+          </div>
+          {isExpanded && (
+            <div className="flex flex-col">
+              <span className="font-semibold text-gray-900 text-sm">Audit System</span>
+              <span className="text-xs text-gray-500 capitalize">{userRole}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Bottom Section - Only visible when expanded */}
-      {isHovered && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-light-border">
-          <div className="flex items-center gap-3 text-slate-gray">
-            <div className="w-8 h-8 rounded-full bg-primary-bg flex items-center justify-center">
-              <Settings size={16} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">Quick Settings</p>
-            </div>
-          </div>
-        </div>
-      )}
-    </aside>
-  );
-};
+      {/* Navigation Menu */}
+      <nav className="flex-1 overflow-y-auto py-4">
+        <div className="space-y-1 px-3">
+          {filteredMenuItems.map((item, index) => {
+            if (item.isSection) {
+              return isExpanded ? (
+                <div key={index} className="px-3 py-2 mt-6 first:mt-0">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{item.title}</h3>
+                </div>
+              ) : (
+                <div key={index} className="border-t border-gray-200 my-2" />
+              )
+            }
 
-export default Sidebar;
+            const Icon = item.icon!
+            const active = isActive(item.path!)
+
+            return (
+              <button
+                key={index}
+                onClick={() => handleNavigation(item.path!)}
+                className={`
+                  w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                  ${
+                    active
+                      ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  }
+                  ${!isExpanded ? "justify-center" : ""}
+                `}
+                title={!isExpanded ? item.title : undefined}
+              >
+                <Icon
+                  className={`
+                  h-5 w-5 flex-shrink-0
+                  ${active ? "text-blue-700" : "text-gray-400"}
+                  ${isExpanded ? "mr-3" : ""}
+                `}
+                />
+                {isExpanded && <span className="truncate">{item.title}</span>}
+                {active && !isExpanded && <div className="absolute left-0 w-1 h-6 bg-blue-700 rounded-r" />}
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200">
+        {isExpanded ? (
+          <div className="text-xs text-gray-500 text-center">
+            <p>Audit Management v2.0</p>
+            <p>© 2024 Your Company</p>
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <div className="h-2 w-2 bg-green-500 rounded-full" title="System Online" />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default Sidebar

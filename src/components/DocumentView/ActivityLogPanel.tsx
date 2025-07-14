@@ -41,7 +41,7 @@ const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({ documentId, documen
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/activities`, {
+        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/activities`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

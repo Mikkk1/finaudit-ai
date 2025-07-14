@@ -43,7 +43,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ documentId, document 
       setError(null)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/preview`, {
+        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/preview`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -163,7 +163,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ documentId, document 
       const token = localStorage.getItem("token")
 
       // Use the dedicated download endpoint
-      const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/download`, {
+      const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/download`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

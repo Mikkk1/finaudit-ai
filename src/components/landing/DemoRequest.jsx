@@ -18,22 +18,37 @@ const DemoRequest = () => {
     setFormState((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    console.log("Form submitted:", formState)
-    // Here you would typically send the data to your backend
-    setIsSubmitted(true)
-    // Reset form after submission
-    setFormState({
-      name: "",
-      email: "",
-      company: "",
-      role: "",
-      message: "",
-    })
-    // Reset submission state after 5 seconds
-    setTimeout(() => setIsSubmitted(false), 5000)
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch('http://127.0.0.1:8000/demo-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formState),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to submit demo request');
+      }
+  
+      setIsSubmitted(true);
+      setFormState({
+        name: "",
+        email: "",
+        company: "",
+        role: "",
+        message: "",
+      });
+  
+      setTimeout(() => setIsSubmitted(false), 5000);
+    } catch (error) {
+      console.error("Error submitting demo request:", error);
+      // You might want to show an error message to the user
+    }
+  };
 
   return (
     <section id="demo-request" className="bg-white py-20 relative overflow-hidden">

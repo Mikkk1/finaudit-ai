@@ -42,9 +42,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <a href="#" className="flex items-center">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-[#003366] to-[#004D99] flex items-center justify-center text-white font-bold text-xl">
-                FA
-              </div>
+              <img src="/logo.png" alt="Logo" className="h-10 w-10 rounded-full" />
               <span className={`ml-2 text-xl font-bold ${isScrolled ? "text-[#003366]" : "text-white"}`}>
                 FinAudit AI
               </span>

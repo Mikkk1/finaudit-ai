@@ -36,7 +36,7 @@ const AIAnalysisPanel: React.FC<AIAnalysisPanelProps> = ({ documentId, document 
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/ai-analysis`, {
+        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/ai-analysis`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

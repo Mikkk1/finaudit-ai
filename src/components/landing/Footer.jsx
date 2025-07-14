@@ -10,7 +10,6 @@ const Footer = () => {
         { name: "Features", href: "#features" },
         { name: "Pricing", href: "#pricing" },
         { name: "Use Cases", href: "#use-cases" },
-        { name: "Roadmap", href: "#" },
       ],
     },
     {
@@ -63,7 +62,7 @@ const Footer = () => {
                   href="mailto:info@finaudit.ai"
                   className="text-[#64748B] hover:text-navy-blue transition-colors duration-300"
                 >
-                  minhalawais1@gmail.com
+                  minhal@finaudit.live
                 </a>
               </div>
               <div className="flex items-center">

@@ -30,7 +30,7 @@ const CustomViews: React.FC<CustomViewsProps> = ({ onSelectView }) => {
 
   const fetchViews = async () => {
     try {
-      const response = await axios.get("/api/custom-views")
+      const response = await axios.get("http://127.0.0.1:8000/api/custom-views")
       setViews(response.data)
     } catch (error) {
       console.error("Error fetching custom views:", error)
@@ -40,7 +40,7 @@ const CustomViews: React.FC<CustomViewsProps> = ({ onSelectView }) => {
   const handleSaveView = async () => {
     if (newViewName.trim()) {
       try {
-        const response = await axios.post("/api/custom-views", {
+        const response = await axios.post("http://127.0.0.1:8000/api/custom-views", {
           name: newViewName.trim(),
           filters: {}, // You should pass the current filters here
           sortBy: "uploadDate", // You should pass the current sortBy here
@@ -57,7 +57,7 @@ const CustomViews: React.FC<CustomViewsProps> = ({ onSelectView }) => {
     try {
       const viewToUpdate = views.find((view) => view.id === id)
       if (viewToUpdate) {
-        const response = await axios.put(`/api/custom-views/${id}`, {
+        const response = await axios.put(`http://127.0.0.1:8000/api/custom-views/${id}`, {
           ...viewToUpdate,
           isPinned: !viewToUpdate.isPinned,
         })
@@ -78,7 +78,7 @@ const CustomViews: React.FC<CustomViewsProps> = ({ onSelectView }) => {
       try {
         const viewToUpdate = views.find((view) => view.id === editingId)
         if (viewToUpdate) {
-          const response = await axios.put(`/api/custom-views/${editingId}`, {
+          const response = await axios.put(`http://127.0.0.1:8000/api/custom-views/${editingId}`, {
             ...viewToUpdate,
             name: editName.trim(),
           })
@@ -93,7 +93,7 @@ const CustomViews: React.FC<CustomViewsProps> = ({ onSelectView }) => {
 
   const deleteView = async (id: string) => {
     try {
-      await axios.delete(`/api/custom-views/${id}`)
+      await axios.delete(`http://127.0.0.1:8000/api/custom-views/${id}`)
       setViews(views.filter((view) => view.id !== id))
     } catch (error) {
       console.error("Error deleting custom view:", error)

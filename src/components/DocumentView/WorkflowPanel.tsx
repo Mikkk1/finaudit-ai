@@ -5,9 +5,9 @@ import { useState, useEffect } from "react"
 import { CheckCircle, Circle, AlertCircle, ChevronRight, Loader2 } from "lucide-react"
 import axios from "axios"
 
-import Button from "../../components/ui/button.tsx"
+import { Button } from '../../components/ui/button.tsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.tsx"
-import Textarea from "../../components/ui/textarea.tsx"
+import { Textarea } from "../../components/ui/textarea.tsx"
 import { toast } from "../../utils/toast.tsx"
 
 interface WorkflowStep {
@@ -58,7 +58,7 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ documentId, document }) =
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/workflows`, {
+        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/workflows`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -146,7 +146,7 @@ const WorkflowPanel: React.FC<WorkflowPanelProps> = ({ documentId, document }) =
     try {
       const token = localStorage.getItem("token")
       const response = await axios.post(
-        `https://finaudit.live/api/documents/${documentId}/workflow/action`,
+        `http://127.0.0.1:8000/documents/${documentId}/workflow/action`,
         {
           workflow_id: activeWorkflow.id,
           action: actionType,

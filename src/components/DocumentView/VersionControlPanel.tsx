@@ -21,9 +21,9 @@ import {
   Loader2,
 } from "lucide-react"
 import axios from "axios"
-import Button from "../../components/ui/button.tsx"
+import { Button } from "../../components/ui/button.tsx"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.tsx"
-import Textarea from "../../components/ui/textarea.tsx"
+import { Textarea } from "../../components/ui/textarea.tsx"
 import { toast } from "../../utils/toast.tsx"
 import { Badge } from "../../components/ui/badge.tsx"
 
@@ -60,7 +60,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ documentId, d
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        const response = await axios.get(`https://finaudit.live/api/documents/${documentId}/versions`, {
+        const response = await axios.get(`http://127.0.0.1:8000/documents/${documentId}/versions`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -125,7 +125,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ documentId, d
         formData.append("file", selectedFile)
         formData.append("notes", newVersionNotes)
 
-        response = await axios.post(`https://finaudit.live/api/documents/${documentId}/versions/file`, formData, {
+        response = await axios.post(`http://127.0.0.1:8000/documents/${documentId}/versions/file`, formData, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
@@ -133,7 +133,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ documentId, d
         })
       } else {
         response = await axios.post(
-          `https://finaudit.live/api/documents/${documentId}/versions`,
+          `http://127.0.0.1:8000/documents/${documentId}/versions`,
           { content: newVersionNotes },
           {
             headers: {
@@ -185,7 +185,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ documentId, d
       }
 
       // Create a URL for viewing the version content
-      const url = `https://finaudit.live/api/documents/${documentId}/versions/${version.id}/content`
+      const url = `http://127.0.0.1:8000/documents/${documentId}/versions/${version.id}/content`
 
       // Fetch the content with the token in the headers
       const response = await fetch(url, {
@@ -226,7 +226,7 @@ const VersionControlPanel: React.FC<VersionControlPanelProps> = ({ documentId, d
       }
 
       // Create a URL for downloading the version content
-      const url = `https://finaudit.live/api/documents/${documentId}/versions/${version.id}/download`
+      const url = `http://127.0.0.1:8000/documents/${documentId}/versions/${version.id}/download`
 
       // Fetch the file with the token in the headers
       const response = await fetch(url, {
