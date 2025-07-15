@@ -11,7 +11,7 @@ import json
 from app.database import get_db
 from app.routers.auth import get_current_user
 from app.models import *
-from .models import MeetingCreate, MeetingUpdate
+from app.routers.audit.models import MeetingCreate, MeetingUpdate, MeetingCompletionData # Import the new model
 from .services import send_meeting_invites, generate_meeting_minutes_template
 
 meeting_router = APIRouter(prefix="/api/audits", tags=["audit-meetings"])
@@ -446,11 +446,11 @@ async def submit_meeting_feedback(
 @meeting_router.post("/meetings/{meeting_id}/complete")
 async def complete_meeting(
     meeting_id: int,
-    outcomes: Optional[str] = None,
+    completion_data: MeetingCompletionData, # Changed to accept a Pydantic model
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Mark meeting as completed"""
+    """Mark meeting as completed and capture outcomes/notes"""
     
     meeting = db.query(AuditMeeting).filter(AuditMeeting.id == meeting_id).first()
     if not meeting:
@@ -462,12 +462,19 @@ async def complete_meeting(
     
     meeting.status = MeetingStatus.completed
     meeting.end_time = datetime.utcnow()
-    if outcomes:
-        meeting.meeting_outcomes = outcomes
+    
+    # Update fields from completion_data
+    if completion_data.meeting_outcomes is not None:
+        meeting.meeting_outcomes = completion_data.meeting_outcomes
+    if completion_data.notes is not None:
+        meeting.notes = completion_data.notes
+    if completion_data.recording_url is not None:
+        meeting.recording_url = completion_data.recording_url
     
     db.commit()
+    db.refresh(meeting) # Refresh to get updated fields
     
-    return {"message": "Meeting marked as completed"}
+    return {"message": "Meeting marked as completed", "meeting": meeting} # Return updated meeting object
 
 @meeting_router.get("/meetings/templates")
 async def get_meeting_templates(

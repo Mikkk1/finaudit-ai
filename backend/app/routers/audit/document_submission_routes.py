@@ -1,27 +1,151 @@
 """
-Enhanced document submission routes with multiple document support
+Enhanced document submission routes with AI finding generation
 """
 
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 
 from app.database import get_db
 from app.routers.auth import get_current_user
 from app.models import *
 from app.cruds.document import create_document
+from app.routers.audit.ai_findings_generator import AIFindingGenerator
 
-router = APIRouter(prefix="/api/audits", tags=["audit-document-submission"])
+router = APIRouter(prefix="/api/audits", tags=["audit-document-submission-enhanced"])
+
+async def generate_ai_findings_background(
+    document_id: int,
+    audit_id: int, 
+    document_submission_id: int,
+    user_id: int,
+    db_session_factory
+):
+    """
+    Background task to generate AI findings from submitted document
+    """
+    try:
+        # Create new database session for background task
+        db = db_session_factory()
+        
+        # Get user for the background task
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            print(f"User {user_id} not found for AI finding generation")
+            return
+        
+        # Initialize AI finding generator
+        ai_generator = AIFindingGenerator(db)
+        
+        # Generate findings
+        findings = await ai_generator.generate_findings_from_document(
+            document_id=document_id,
+            audit_id=audit_id,
+            document_submission_id=document_submission_id,
+            current_user=user
+        )
+        
+        print(f"Generated {len(findings)} AI findings for document {document_id}")
+        
+        # Update submission with AI analysis status
+        submission = db.query(DocumentSubmission).filter(
+            DocumentSubmission.id == document_submission_id
+        ).first()
+        
+        if submission:
+            submission.ai_validation_score = 8.5 if findings else 6.0
+            submission.ai_validation_notes = f"AI analysis completed. Generated {len(findings)} findings."
+            db.commit()
+        
+        db.close()
+        
+    except Exception as e:
+        print(f"Error in background AI finding generation: {e}")
+        if 'db' in locals():
+            db.close()
+
+@router.post("/{audit_id}/submit-document-enhanced")
+async def submit_document_enhanced(
+    audit_id: int,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    requirement_id: int = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Enhanced document submission with AI finding generation"""
+    
+    requirement = db.query(DocumentRequirement).filter(
+        DocumentRequirement.id == requirement_id,
+        DocumentRequirement.audit_id == audit_id
+    ).first()
+    
+    if not requirement:
+        raise HTTPException(status_code=404, detail="Requirement not found")
+    
+    try:
+        # First, create the document in the document system
+        metadata = {
+            "title": file.filename,
+            "description": f"Document for audit requirement: {requirement.document_type}",
+            "category": "audit_submission",
+            "audit_id": audit_id,
+            "requirement_id": requirement_id
+        }
+        
+        document = create_document(db, file, str(metadata), current_user)
+        
+        # Then create the submission record
+        submission = DocumentSubmission(
+            requirement_id=requirement_id,
+            document_id=document.id,
+            submitted_by=current_user.id,
+            submitted_at=datetime.utcnow(),
+            verification_status=EvidenceStatus.pending,
+            revision_round=1,
+            workflow_stage=WorkflowStage.ai_validating
+        )
+        
+        db.add(submission)
+        db.commit()
+        db.refresh(submission)
+        
+        # Schedule AI finding generation as background task
+        from app.database import SessionLocal
+        background_tasks.add_task(
+            generate_ai_findings_background,
+            document_id=document.id,
+            audit_id=audit_id,
+            document_submission_id=submission.id,
+            user_id=current_user.id,
+            db_session_factory=SessionLocal
+        )
+        
+        return {
+            "message": "Document uploaded and submitted successfully. AI analysis in progress.",
+            "submission_id": submission.id,
+            "document_id": document.id,
+            "status": "ai_validating",
+            "next_stage": "under_review",
+            "estimated_review_time": "2-4 hours",
+            "ai_analysis_status": "processing",
+            "workflow_id": f"wf_{submission.id}"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to submit document: {str(e)}")
 
 @router.post("/{audit_id}/submit-selected-document")
 async def submit_selected_document(
     audit_id: int,
+    background_tasks: BackgroundTasks,
     submission_data: Dict[str, Any],
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Submit a single existing document from document drive for audit requirement"""
+    """Submit a single existing document with AI finding generation"""
     
     requirement_id = submission_data.get("requirement_id")
     document_id = submission_data.get("document_id")
@@ -57,22 +181,32 @@ async def submit_selected_document(
             submitted_by=current_user.id,
             submitted_at=datetime.utcnow(),
             verification_status=EvidenceStatus.pending,
-            revision_round=1
+            revision_round=1,
+            workflow_stage=WorkflowStage.ai_validating
         )
-        
-        # Set workflow_stage if the field exists
-        if hasattr(submission, 'workflow_stage'):
-            submission.workflow_stage = WorkflowStage.submitted
         
         db.add(submission)
         db.commit()
+        db.refresh(submission)
+        
+        # Schedule AI finding generation as background task
+        from app.database import SessionLocal
+        background_tasks.add_task(
+            generate_ai_findings_background,
+            document_id=document.id,
+            audit_id=audit_id,
+            document_submission_id=submission.id,
+            user_id=current_user.id,
+            db_session_factory=SessionLocal
+        )
         
         return {
-            "message": "Document submitted successfully",
+            "message": "Document submitted successfully. AI analysis in progress.",
             "submission_id": submission.id,
-            "status": "submitted",
-            "next_stage": "ai_validation",
+            "status": "ai_validating",
+            "next_stage": "under_review",
             "estimated_review_time": "2-4 hours",
+            "ai_analysis_status": "processing",
             "document": {"id": document.id, "title": document.title}
         }
         
@@ -80,208 +214,124 @@ async def submit_selected_document(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to submit document: {str(e)}")
 
-@router.post("/{audit_id}/submit-selected-documents")
-async def submit_selected_documents(
+@router.get("/{audit_id}/ai-findings")
+async def get_ai_generated_findings(
     audit_id: int,
-    submission_data: Dict[str, Any],
+    document_submission_id: int = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Submit multiple existing documents from document drive for audit requirement"""
-    
-    requirement_id = submission_data.get("requirement_id")
-    document_ids = submission_data.get("document_ids", [])
-    notes = submission_data.get("notes", "")
-    
-    if not requirement_id or not document_ids:
-        raise HTTPException(status_code=400, detail="Missing requirement_id or document_ids")
-    
-    # Verify requirement exists and belongs to the audit
-    requirement = db.query(DocumentRequirement).filter(
-        DocumentRequirement.id == requirement_id,
-        DocumentRequirement.audit_id == audit_id
-    ).first()
-    
-    if not requirement:
-        raise HTTPException(status_code=404, detail="Requirement not found")
-    
-    # Verify all documents exist and user has access
-    documents = db.query(Document).filter(
-        Document.id.in_(document_ids),
-        Document.company_id == current_user.company_id,
-        Document.is_deleted == False
-    ).all()
-    
-    if len(documents) != len(document_ids):
-        raise HTTPException(status_code=404, detail="One or more documents not found or access denied")
-    
-    submissions = []
+    """Get AI-generated findings for an audit or specific document submission"""
     
     try:
-        for document in documents:
-            # Create new submission for each document
-            submission = DocumentSubmission(
-                requirement_id=requirement_id,
-                document_id=document.id,
-                submitted_by=current_user.id,
-                submitted_at=datetime.utcnow(),
-                verification_status=EvidenceStatus.pending,
-                revision_round=1
-            )
-            
-            # Set workflow_stage if the field exists
-            if hasattr(submission, 'workflow_stage'):
-                submission.workflow_stage = WorkflowStage.submitted
-            
-            db.add(submission)
-            submissions.append(submission)
-        
-        db.commit()
-        
-        return {
-            "message": f"{len(submissions)} documents submitted successfully",
-            "submission_ids": [s.id for s in submissions],
-            "status": "submitted",
-            "next_stage": "ai_validation",
-            "estimated_review_time": "2-4 hours",
-            "documents": [{"id": d.id, "title": d.title} for d in documents]
-        }
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to submit documents: {str(e)}")
-
-@router.post("/{audit_id}/submit-document-enhanced")
-async def submit_document_enhanced(
-    audit_id: int,
-    file: UploadFile = File(...),
-    requirement_id: int = Form(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Enhanced document submission with upload and automatic document creation"""
-    
-    requirement = db.query(DocumentRequirement).filter(
-        DocumentRequirement.id == requirement_id,
-        DocumentRequirement.audit_id == audit_id
-    ).first()
-    
-    if not requirement:
-        raise HTTPException(status_code=404, detail="Requirement not found")
-    
-    try:
-        # First, create the document in the document system
-        metadata = {
-            "title": file.filename,
-            "description": f"Document for audit requirement: {requirement.document_type}",
-            "category": "audit_submission",
-            "audit_id": audit_id,
-            "requirement_id": requirement_id
-        }
-        
-        document = create_document(db, file, str(metadata), current_user)
-        
-        # Then create the submission record
-        submission = DocumentSubmission(
-            requirement_id=requirement_id,
-            document_id=document.id,
-            submitted_by=current_user.id,
-            submitted_at=datetime.utcnow(),
-            verification_status=EvidenceStatus.pending,
-            revision_round=1
+        query = db.query(AuditFinding).filter(
+            AuditFinding.audit_id == audit_id,
+            AuditFinding.finding_source == "ai_detected"
         )
         
-        # Set workflow_stage if the field exists
-        if hasattr(submission, 'workflow_stage'):
-            submission.workflow_stage = WorkflowStage.submitted
+        if document_submission_id:
+            query = query.filter(AuditFinding.document_submission_id == document_submission_id)
         
-        db.add(submission)
-        db.commit()
-        db.refresh(submission)
+        findings = query.order_by(AuditFinding.created_at.desc()).all()
+        
+        findings_list = []
+        for finding in findings:
+            # Get document submission details
+            doc_submission = None
+            if finding.document_submission_id:
+                doc_submission = db.query(DocumentSubmission).filter(
+                    DocumentSubmission.id == finding.document_submission_id
+                ).first()
+            
+            finding_data = {
+                "id": finding.id,
+                "finding_id": finding.finding_id,
+                "title": finding.title,
+                "description": finding.description,
+                "finding_type": finding.finding_type,
+                "severity": finding.severity.value,
+                "status": finding.status.value,
+                "ai_confidence_score": finding.ai_confidence_score,
+                "ai_risk_score": finding.ai_risk_score,
+                "ai_recommendations": finding.ai_recommendations,
+                "created_at": finding.created_at.isoformat(),
+                "document_reference": {
+                    "submission_id": finding.document_submission_id,
+                    "document_title": doc_submission.document.title if doc_submission else None,
+                    "requirement_type": doc_submission.requirement.document_type if doc_submission else None
+                } if doc_submission else None,
+                "evidence": finding.evidence,
+                "impact_assessment": finding.impact_assessment
+            }
+            
+            findings_list.append(finding_data)
         
         return {
-            "message": "Document uploaded and submitted successfully",
-            "submission_id": submission.id,
-            "document_id": document.id,
-            "status": "ai_validating",
-            "next_stage": "under_review",
-            "estimated_review_time": "2-4 hours",
-            "ai_validation_score": 8.2,
-            "workflow_id": f"wf_{submission.id}"
+            "ai_findings": findings_list,
+            "total": len(findings_list),
+            "audit_id": audit_id
         }
         
     except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to submit document: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get AI findings: {str(e)}")
 
-@router.post("/{audit_id}/submit-documents-enhanced")
-async def submit_documents_enhanced(
+@router.post("/{audit_id}/regenerate-ai-findings/{document_submission_id}")
+async def regenerate_ai_findings(
     audit_id: int,
-    files: List[UploadFile] = File(...),
-    requirement_id: int = Form(...),
+    document_submission_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Enhanced document submission with multiple file upload support"""
-    
-    requirement = db.query(DocumentRequirement).filter(
-        DocumentRequirement.id == requirement_id,
-        DocumentRequirement.audit_id == audit_id
-    ).first()
-    
-    if not requirement:
-        raise HTTPException(status_code=404, detail="Requirement not found")
-    
-    submissions = []
-    documents = []
+    """Regenerate AI findings for a specific document submission"""
     
     try:
-        for file in files:
-            # Create the document in the document system
-            metadata = {
-                "title": file.filename,
-                "description": f"Document for audit requirement: {requirement.document_type}",
-                "category": "audit_submission",
-                "audit_id": audit_id,
-                "requirement_id": requirement_id
-            }
+        # Verify submission exists
+        submission = db.query(DocumentSubmission).filter(
+            DocumentSubmission.id == document_submission_id
+        ).first()
+        
+        if not submission:
+            raise HTTPException(status_code=404, detail="Document submission not found")
+        
+        # Delete existing AI findings for this submission
+        existing_findings = db.query(AuditFinding).filter(
+            AuditFinding.document_submission_id == document_submission_id,
+            AuditFinding.finding_source == "ai_detected"
+        ).all()
+        
+        for finding in existing_findings:
+            # Delete workflow history
+            db.query(AuditFindingWorkflow).filter(
+                AuditFindingWorkflow.finding_id == finding.id
+            ).delete()
             
-            document = create_document(db, file, str(metadata), current_user)
-            documents.append(document)
-            
-            # Create the submission record
-            submission = DocumentSubmission(
-                requirement_id=requirement_id,
-                document_id=document.id,
-                submitted_by=current_user.id,
-                submitted_at=datetime.utcnow(),
-                verification_status=EvidenceStatus.pending,
-                revision_round=1
-            )
-            
-            # Set workflow_stage if the field exists
-            if hasattr(submission, 'workflow_stage'):
-                submission.workflow_stage = WorkflowStage.submitted
-            
-            db.add(submission)
-            submissions.append(submission)
+            # Delete the finding
+            db.delete(finding)
         
         db.commit()
         
+        # Schedule new AI finding generation
+        from app.database import SessionLocal
+        background_tasks.add_task(
+            generate_ai_findings_background,
+            document_id=submission.document_id,
+            audit_id=audit_id,
+            document_submission_id=document_submission_id,
+            user_id=current_user.id,
+            db_session_factory=SessionLocal
+        )
+        
         return {
-            "message": f"{len(submissions)} documents uploaded and submitted successfully",
-            "submission_ids": [s.id for s in submissions],
-            "document_ids": [d.id for d in documents],
-            "status": "ai_validating",
-            "next_stage": "under_review",
-            "estimated_review_time": "2-4 hours",
-            "ai_validation_score": 8.2,
-            "documents": [{"id": d.id, "title": d.title} for d in documents]
+            "message": "AI finding regeneration started",
+            "submission_id": document_submission_id,
+            "status": "processing"
         }
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to submit documents: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to regenerate AI findings: {str(e)}")
+
 
 @router.get("/{audit_id}/submissions/{submission_id}/document")
 async def get_submission_document(

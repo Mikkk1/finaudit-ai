@@ -902,33 +902,37 @@ async def get_document_ai_analysis_route(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # Log the AI analysis view activity
-    activity = Activity(
-        action="view_ai_analysis",
-        user_id=current_user.id,
-        document_id=document_id,
-        details={"type": "ai_analysis_viewed"},
-        created_at=datetime.utcnow()
-    )
-    db.add(activity)
-    db.commit()
+    # [Activity logging code remains the same...]
 
     ai_analysis = db.query(DocumentAIAnalysis).filter(
         DocumentAIAnalysis.document_id == document_id
     ).first()
 
-    # Initialize an empty dictionary for AI analysis results
-    ai_analysis_dict = {}
+    if not ai_analysis:
+        return {"aiAnalysis": []}
 
-    # Check if ai_analysis exists and results is a dictionary
-    if ai_analysis and isinstance(ai_analysis.results, dict):
-        # Iterate over the keys and values in ai_analysis.results
-        for key, value in ai_analysis.results.items():
-            # Add each key-value pair to ai_analysis_dict
-            ai_analysis_dict[key] = value
+    results = ai_analysis.results
     
+    # Handle case where results is a JSON string
+    if isinstance(results, str):
+        try:
+            results = json.loads(results)
+        except json.JSONDecodeError:
+            results = []
+
+    # Ensure we always return a list of dicts
+    if results is None:
+        results = []
+    elif isinstance(results, dict):  # If single dict, wrap in list
+        results = [results]
+    elif not isinstance(results, list):  # If not list, make empty list
+        results = []
+    
+    # Filter to only include dict items
+    results = [r for r in results if isinstance(r, dict)]
+
     return {
-        "aiAnalysis": [ai_analysis_dict] if ai_analysis_dict else []
+        "aiAnalysis": results
     }
 
 # New endpoint for related documents

@@ -400,14 +400,14 @@ class FindingService:
                     'assigned_to': finding.assigned_to,
                     'assigned_date': finding.assigned_date.isoformat() if finding.assigned_date else None,
                     'due_date': finding.due_date.isoformat() if finding.due_date else None,
-                    'resolved_date': finding.resolved_date.isoformat() if finding.resolved_date else None,
+                    'resolved_date': finding.resolved_at.isoformat() if finding.resolved_at else None,
                     'evidence': finding.evidence or {},
                     'remediation_plan': finding.remediation_plan,
                     'remediation_status': finding.remediation_status,
                     'remediation_notes': finding.remediation_notes,
                     'created_by': f"{finding.creator.f_name} {finding.creator.l_name}" if finding.creator else "System",
                     'created_at': finding.created_at.isoformat(),
-                    'updated_at': finding.updated_at.isoformat(),
+                    'updated_at': finding.created_at.isoformat(),
                     'audit': {
                         'id': finding.audit.id,
                         'name': finding.audit.name

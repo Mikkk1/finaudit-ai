@@ -114,17 +114,52 @@ class ActionItemCreate(BaseModel):
     assigned_to: int
     due_date: Optional[datetime] = None
 
+
+class MeetingAgendaItemCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    time_allocation: Optional[int] = 10
+    order_index: Optional[int] = 0
+
 class MeetingCreate(BaseModel):
     title: str
     meeting_type: str
     scheduled_time: datetime
-    duration_minutes: int = 60
+    duration_minutes: Optional[int] = 60
     location: Optional[str] = None
     meeting_url: Optional[str] = None
     notes: Optional[str] = None
+    meeting_objectives: Optional[str] = None
+    is_recurring: Optional[bool] = False
+    recurrence_pattern: Optional[str] = None
+    recurrence_end_date: Optional[datetime] = None
+    preparation_checklist: Optional[List[str]] = None
     attendee_emails: List[str] = []
-    agenda_items: List[dict] = []
+    agenda_items: List[MeetingAgendaItemCreate] = []
 
+class MeetingUpdate(BaseModel):
+    title: Optional[str] = None
+    meeting_type: Optional[str] = None
+    scheduled_time: Optional[datetime] = None
+    duration_minutes: Optional[int] = None
+    location: Optional[str] = None
+    meeting_url: Optional[str] = None
+    notes: Optional[str] = None
+    meeting_objectives: Optional[str] = None
+    meeting_outcomes: Optional[str] = None
+    status: Optional[str] = None
+    is_recurring: Optional[bool] = None
+    recurrence_pattern: Optional[str] = None
+    recurrence_end_date: Optional[datetime] = None
+    preparation_checklist: Optional[List[str]] = None
+    attendee_emails: Optional[List[str]] = None
+    agenda_items: Optional[List[MeetingAgendaItemCreate]] = None
+
+# New Pydantic model for meeting completion data
+class MeetingCompletionData(BaseModel):
+    meeting_outcomes: Optional[str] = None
+    notes: Optional[str] = None
+    recording_url: Optional[str] = None
 class AuditorInviteRequest(BaseModel):
     email: str
     role: str = "auditor"
@@ -235,17 +270,3 @@ class MeetingCreate(BaseModel):
     preparation_checklist: Optional[List[Dict[str, Any]]] = None
     attendee_emails: List[str] = []
     agenda_items: List[Dict[str, Any]] = []
-
-class MeetingUpdate(BaseModel):
-    title: Optional[str] = None
-    meeting_type: Optional[str] = None
-    scheduled_time: Optional[datetime] = None
-    duration_minutes: Optional[int] = None
-    location: Optional[str] = None
-    meeting_url: Optional[str] = None
-    notes: Optional[str] = None
-    meeting_objectives: Optional[str] = None
-    meeting_outcomes: Optional[str] = None
-    status: Optional[str] = None
-    attendee_emails: Optional[List[str]] = None
-    agenda_items: Optional[List[Dict[str, Any]]] = None
