@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, String, DateTime, ForeignKey, JSON, Text, Boolean, Enum, Float, Table
+    Date,Column, Integer, String, DateTime, ForeignKey, JSON, Text, Boolean, Enum, Float, Table
 )
 from sqlalchemy.dialects.postgresql import INET,JSONB
 from sqlalchemy.orm import relationship
@@ -162,7 +162,7 @@ class ComplianceStatus(enum.Enum):
     passed = "passed"
     failed = "failed"
     warning = "warning"
-
+    pending_review = "pending_review"
 class FindingType(enum.Enum):
     compliance = "compliance"
     control_deficiency = "control_deficiency"
@@ -804,10 +804,11 @@ class AuditFinding(Base):
     risk_score = Column(Float)
     created_by = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     resolved_at = Column(DateTime)
     resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     
-    # New columns from migration
+    # Enhanced fields from migration
     finding_id = Column(String(50), unique=True)
     finding_type = Column(String(50), default='compliance')
     ai_detected = Column(Boolean, default=False)
@@ -825,19 +826,53 @@ class AuditFinding(Base):
     remediation_status = Column(String(100))
     remediation_notes = Column(Text)
     
-    # Existing relationships
+    # New simplified workflow fields
+    document_submission_id = Column(Integer, ForeignKey("document_submissions.id"))
+    finding_source = Column(String(50), default='manual')
+    priority_level = Column(String(20), default='medium')
+    impact_assessment = Column(Text)
+    root_cause_analysis = Column(Text)
+    management_response = Column(Text)
+    target_completion_date = Column(Date)
+    actual_completion_date = Column(Date)
+    verification_evidence = Column(Text)
+    closure_notes = Column(Text)
+    business_impact = Column(Text)
+    regulatory_impact = Column(Text)
+    closed_at = Column(DateTime)
+    closed_by = Column(Integer, ForeignKey("users.id"))
+    
+    # Relationships
     audit = relationship("Audit", back_populates="findings")
     creator = relationship("User", foreign_keys=[created_by], back_populates="created_findings")
     resolver = relationship("User", foreign_keys=[resolved_by], back_populates="resolved_findings")
+    closer = relationship("User", foreign_keys=[closed_by])
     action_items = relationship("ActionItem", back_populates="finding")
     evidence_documents = relationship("Document", secondary=finding_evidence, back_populates="evidence_documents")
-    
-    # New relationships
     related_document = relationship("Document", foreign_keys=[document_id])
     related_meeting = relationship("AuditMeeting", foreign_keys=[meeting_id])
+    document_submission = relationship("DocumentSubmission", foreign_keys=[document_submission_id])
     comments = relationship("FindingComment", back_populates="finding")
+    workflow_history = relationship("AuditFindingWorkflow", back_populates="finding", cascade="all, delete-orphan")
 
-# Add the new FindingComment model
+# Simplified workflow tracking table
+class AuditFindingWorkflow(Base):
+    __tablename__ = "audit_finding_workflow"
+    
+    id = Column(Integer, primary_key=True)
+    finding_id = Column(Integer, ForeignKey("audit_findings.id"), nullable=False)
+    from_status = Column(String(50))
+    to_status = Column(String(50), nullable=False)
+    changed_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    change_reason = Column(Text)
+    changed_at = Column(DateTime, default=datetime.utcnow)
+    workflow_data = Column(JSON, default=lambda: {})
+    
+    # Fix relationships
+    finding = relationship("AuditFinding", back_populates="workflow_history")
+    changed_by_user = relationship("User", foreign_keys=[changed_by])
+
+# Enhanced FindingComment model (update existing model)
 class FindingComment(Base):
     __tablename__ = "finding_comments"
     
@@ -845,11 +880,15 @@ class FindingComment(Base):
     finding_id = Column(Integer, ForeignKey("audit_findings.id"), nullable=False)
     comment = Column(Text, nullable=False)
     comment_type = Column(String(50), default='general')
+    comment_category = Column(String(50), default='general')
+    is_internal = Column(Boolean, default=False)
+    attachment_data = Column(JSON)
     created_by = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     finding = relationship("AuditFinding", back_populates="comments")
+
 
 class ActionItem(Base):
     __tablename__ = "action_items"

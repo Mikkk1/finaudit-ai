@@ -76,6 +76,8 @@ from .models import (
     FindingType,
     RemediationStatus,
     DocumentSubmissionWorkflow,
+    DocumentVerificationChain,
+    AuditFindingWorkflow,
     # Association tables
     audit_auditor_assignment,
     conversation_participants,
@@ -114,6 +116,8 @@ __all__ = [
     'FindingType',
     'RemediationStatus',
     'DocumentSubmissionWorkflow',
+    'DocumentVerificationChain',
+    'AuditFindingWorkflow',
     
     # Core models
     'User',
