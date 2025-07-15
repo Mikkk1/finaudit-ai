@@ -10,19 +10,21 @@ import AuditMeetings from "./AuditMeetings.tsx"
 import AIInsights from "./AIInsights.tsx"
 import AuditTeam from "./AuditTeam.tsx"
 import AuditTimeline from "./AuditTimeline.tsx"
+import ComplianceCheckpoints from "./ComplianceCheckpoints.tsx"
+import AuditNotifications from "./AuditNotifications.tsx"
 
-interface AuditDetailsTabsProps {
+interface AuditDetailsTabsEnhancedProps {
   auditId: number
   auditData: any
 }
 
-const AuditDetailsTabs: React.FC<AuditDetailsTabsProps> = ({ auditId, auditData }) => {
+const AuditDetailsTabsEnhanced: React.FC<AuditDetailsTabsEnhancedProps> = ({ auditId, auditData }) => {
   const [activeTab, setActiveTab] = React.useState("overview")
 
   return (
     <div className="space-y-8">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl">
+        <TabsList className="grid w-full grid-cols-9 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl">
           <TabsTrigger
             value="overview"
             className="data-[state=active]:bg-white data-[state=active]:text-[#003366] data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-[#E2E8F0] rounded-xl transition-all duration-200"
@@ -46,6 +48,18 @@ const AuditDetailsTabs: React.FC<AuditDetailsTabsProps> = ({ auditId, auditData 
             className="data-[state=active]:bg-white data-[state=active]:text-[#003366] data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-[#E2E8F0] rounded-xl transition-all duration-200"
           >
             Meetings
+          </TabsTrigger>
+          <TabsTrigger
+            value="compliance"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#003366] data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-[#E2E8F0] rounded-xl transition-all duration-200"
+          >
+            Compliance
+          </TabsTrigger>
+          <TabsTrigger
+            value="notifications"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#003366] data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-[#E2E8F0] rounded-xl transition-all duration-200"
+          >
+            Notifications
           </TabsTrigger>
           <TabsTrigger
             value="timeline"
@@ -86,6 +100,14 @@ const AuditDetailsTabs: React.FC<AuditDetailsTabsProps> = ({ auditId, auditData 
           <AuditMeetings auditId={auditId} />
         </TabsContent>
 
+        <TabsContent value="compliance" className="mt-8">
+          <ComplianceCheckpoints auditId={auditId} />
+        </TabsContent>
+
+        <TabsContent value="notifications" className="mt-8">
+          <AuditNotifications auditId={auditId} />
+        </TabsContent>
+
         <TabsContent value="timeline" className="mt-8">
           <AuditTimeline auditId={auditId} />
         </TabsContent>
@@ -102,4 +124,4 @@ const AuditDetailsTabs: React.FC<AuditDetailsTabsProps> = ({ auditId, auditData 
   )
 }
 
-export default AuditDetailsTabs
+export default AuditDetailsTabsEnhanced

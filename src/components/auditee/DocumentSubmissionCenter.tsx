@@ -21,6 +21,7 @@ import {
   Edit,
   Save,
   Trash2,
+  Bot
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/Card.tsx"
 import { Badge } from "../ui/badge.tsx"
@@ -35,6 +36,7 @@ import DocumentSelector from "./DocumentSubmission/DocumentSelector.tsx"
 import DocumentView from "../../pages/Documents/DocumentView.tsx"
 import DocumentUploadArea from "./DocumentSubmission/DocumentUploadArea.tsx"
 import { useAxios } from "../../hooks/useAxios.ts"
+import AIFindingsPanel from "./AIFindingsPanel.tsx"
 
 interface EnhancedRequirement {
   id: number
@@ -59,6 +61,7 @@ interface EnhancedRequirement {
     ai_validation_score: number
     compliance_score: number
     revision_round: number
+    ai_findings_count: number
     document: {
       id: string
       title: string
@@ -79,55 +82,6 @@ interface Document {
   workflow_status: string
 }
 
-interface SubmissionHistory {
-  submission: {
-    id: number
-    document_type: string
-    status: string
-    workflow_stage: string
-    submitted_at: string
-    submitter: string
-    ai_validation_score: number
-    compliance_score: number
-  }
-  workflow_history: Array<{
-    stage: string
-    status: string
-    performer: string
-    performer_type: string
-    notes: string
-    validation_score: number
-    duration_minutes: number
-    automated: boolean
-    created_at: string
-  }>
-  audit_trail: Array<{
-    action: string
-    actor: string
-    actor_type: string
-    details: any
-    timestamp: string
-    hash: string
-  }>
-  verification_chain: Array<{
-    block_number: number
-    current_hash: string
-    previous_hash: string
-    verification_data: any
-    timestamp: string
-    immutable: boolean
-  }>
-  ai_validations: Array<{
-    validation_type: string
-    validation_score: number
-    confidence_score: number
-    issues_found: string[]
-    recommendations: string[]
-    processing_time_ms: number
-    created_at: string
-  }>
-}
-
 interface DocumentSubmissionCenterProps {
   auditId: number
 }
@@ -136,7 +90,7 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
   const [requirements, setRequirements] = useState<EnhancedRequirement[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadingFiles, setUploadingFiles] = useState<Set<number>>(new Set())
-  const [selectedSubmission, setSelectedSubmission] = useState<SubmissionHistory | null>(null)
+  const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState("all")
@@ -146,6 +100,10 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
   const [selectedDocuments, setSelectedDocuments] = useState<Document[]>([])
   const [viewDocumentId, setViewDocumentId] = useState<string | null>(null)
   const [submissionMode, setSubmissionMode] = useState<"select" | "upload">("select")
+
+  // AI Findings states
+  const [showAIFindings, setShowAIFindings] = useState<number | null>(null)
+  const [selectedAIFinding, setSelectedAIFinding] = useState<any | null>(null)
 
   // Requirement editing states
   const [editingRequirement, setEditingRequirement] = useState<EnhancedRequirement | null>(null)
@@ -195,6 +153,85 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
       setNotifications(response.data.notifications || [])
     } catch (error: any) {
       console.error("Error fetching notifications:", error)
+    }
+  }
+
+  // Enhanced file upload with AI analysis notification
+  const handleFileUpload = async (requirementId: number, files: FileList | File[]) => {
+    setUploadingFiles((prev) => new Set(prev).add(requirementId))
+
+    try {
+      const fileArray = Array.from(files)
+      const uploadPromises = fileArray.map(async (file) => {
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("requirement_id", requirementId.toString())
+
+        return axios.post(`/api/audits/${auditId}/submit-document-enhanced`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        })
+      })
+
+      const responses = await Promise.all(uploadPromises)
+      fetchRequirements() // Refresh the list
+
+      // Show success message with AI analysis info
+      const aiAnalysisCount = responses.filter((r) => r.data.ai_analysis_status === "processing").length
+      let message = `${fileArray.length} document(s) submitted successfully!`
+      if (aiAnalysisCount > 0) {
+        message += ` AI analysis is processing for ${aiAnalysisCount} document(s).`
+      }
+      alert(message)
+    } catch (error: any) {
+      console.error("Error uploading files:", error)
+      const errorMessage = error.response?.data?.detail || "Failed to submit documents"
+      alert(errorMessage)
+    } finally {
+      setUploadingFiles((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(requirementId)
+        return newSet
+      })
+    }
+  }
+
+  // Enhanced document selection with AI analysis
+  const handleDocumentSelect = async (requirementId: number, documents: Document[]) => {
+    setUploadingFiles((prev) => new Set(prev).add(requirementId))
+
+    try {
+      const submitPromises = documents.map(async (document) => {
+        return axios.post(`/api/audits/${auditId}/submit-selected-document`, {
+          requirement_id: requirementId,
+          document_id: Number.parseInt(document.id),
+          notes: `Selected document: ${document.title}`,
+        })
+      })
+
+      const responses = await Promise.all(submitPromises)
+      fetchRequirements() // Refresh the list
+      setShowDocumentSelector(null)
+      setSelectedDocuments([])
+
+      // Show success message with AI analysis info
+      const aiAnalysisCount = responses.filter((r) => r.data.ai_analysis_status === "processing").length
+      let message = `${documents.length} document(s) submitted successfully!`
+      if (aiAnalysisCount > 0) {
+        message += ` AI analysis is processing for ${aiAnalysisCount} document(s).`
+      }
+      alert(message)
+    } catch (error: any) {
+      console.error("Error submitting selected documents:", error)
+      const errorMessage = error.response?.data?.detail || "Failed to submit selected documents"
+      alert(errorMessage)
+    } finally {
+      setUploadingFiles((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(requirementId)
+        return newSet
+      })
     }
   }
 
@@ -251,7 +288,7 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
 
   // Delete requirement handler
   const handleDeleteRequirement = async (requirementId: number) => {
-    //("Are you sure you want to delete this requirement?")) return
+    //if (!confirm("Are you sure you want to delete this requirement?")) return
 
     try {
       await axios.delete(`/api/audits/requirements/${requirementId}`)
@@ -261,71 +298,6 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
       console.error("Error deleting requirement:", error)
       const errorMessage = error.response?.data?.detail || "Failed to delete requirement"
       alert(errorMessage)
-    }
-  }
-
-  // Update the handleFileUpload function to support multiple files
-  const handleFileUpload = async (requirementId: number, files: FileList | File[]) => {
-    setUploadingFiles((prev) => new Set(prev).add(requirementId))
-
-    try {
-      const fileArray = Array.from(files)
-      const uploadPromises = fileArray.map(async (file) => {
-        const formData = new FormData()
-        formData.append("file", file)
-        formData.append("requirement_id", requirementId.toString())
-
-        return axios.post(`/api/audits/${auditId}/submit-document-enhanced`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        })
-      })
-
-      await Promise.all(uploadPromises)
-      fetchRequirements() // Refresh the list
-      alert(`${fileArray.length} document(s) submitted successfully!`)
-    } catch (error: any) {
-      console.error("Error uploading files:", error)
-      const errorMessage = error.response?.data?.detail || "Failed to submit documents"
-      alert(errorMessage)
-    } finally {
-      setUploadingFiles((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(requirementId)
-        return newSet
-      })
-    }
-  }
-
-  // Update the handleDocumentSelect function to support multiple documents
-  const handleDocumentSelect = async (requirementId: number, documents: Document[]) => {
-    setUploadingFiles((prev) => new Set(prev).add(requirementId))
-
-    try {
-      const submitPromises = documents.map(async (document) => {
-        return axios.post(`/api/audits/${auditId}/submit-selected-document`, {
-          requirement_id: requirementId,
-          document_id: Number.parseInt(document.id),
-          notes: `Selected document: ${document.title}`,
-        })
-      })
-
-      await Promise.all(submitPromises)
-      fetchRequirements() // Refresh the list
-      setShowDocumentSelector(null)
-      setSelectedDocuments([])
-      alert(`${documents.length} document(s) submitted successfully!`)
-    } catch (error: any) {
-      console.error("Error submitting selected documents:", error)
-      const errorMessage = error.response?.data?.detail || "Failed to submit selected documents"
-      alert(errorMessage)
-    } finally {
-      setUploadingFiles((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(requirementId)
-        return newSet
-      })
     }
   }
 
@@ -421,7 +393,9 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
             <h1 className="text-4xl font-bold bg-gradient-to-r from-[#003366] to-[#004D99] bg-clip-text text-transparent">
               Document Submission Center
             </h1>
-            <p className="text-[#64748B] text-lg">AI-powered document submission with real-time validation</p>
+            <p className="text-[#64748B] text-lg">
+              AI-powered document submission with real-time validation and finding generation
+            </p>
           </div>
 
           {/* Enhanced Action Buttons */}
@@ -487,13 +461,16 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-[#64748B]">Under Review</p>
-                  <p className="text-3xl font-bold text-[#3B82F6]">
-                    {requirements.filter((r) => r.submissions?.some((s) => s.workflow_stage === "under_review")).length}
+                  <p className="text-sm font-medium text-[#64748B]">AI Analyzing</p>
+                  <p className="text-3xl font-bold text-[#8B5CF6]">
+                    {
+                      requirements.filter((r) => r.submissions?.some((s) => s.workflow_stage === "ai_validating"))
+                        .length
+                    }
                   </p>
                 </div>
-                <div className="p-3 bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8] rounded-xl">
-                  <Eye className="w-6 h-6 text-white" />
+                <div className="p-3 bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] rounded-xl">
+                  <Brain className="w-6 h-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -503,13 +480,17 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-[#64748B]">Overdue</p>
-                  <p className="text-3xl font-bold text-[#DC2626]">
-                    {requirements.filter((r) => r.days_until_deadline !== null && r.days_until_deadline < 0).length}
+                  <p className="text-sm font-medium text-[#64748B]">AI Findings</p>
+                  <p className="text-3xl font-bold text-[#F97316]">
+                    {requirements.reduce(
+                      (total, r) =>
+                        total + (r.submissions?.reduce((sum, s) => sum + (s.ai_findings_count || 0), 0) || 0),
+                      0,
+                    )}
                   </p>
                 </div>
-                <div className="p-3 bg-gradient-to-br from-[#DC2626] to-[#B91C1C] rounded-xl">
-                  <AlertTriangle className="w-6 h-6 text-white" />
+                <div className="p-3 bg-gradient-to-br from-[#F97316] to-[#EA580C] rounded-xl">
+                  <Bot className="w-6 h-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -559,7 +540,9 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
           const isUploading = uploadingFiles.has(requirement.id)
           const isOverdue = requirement.days_until_deadline !== null && requirement.days_until_deadline < 0
           const isShowingSelector = showDocumentSelector === requirement.id
+          const isShowingAIFindings = showAIFindings === requirement.id
           const hasSubmissions = requirement.submissions && requirement.submissions.length > 0
+          const totalAIFindings = requirement.submissions?.reduce((sum, s) => sum + (s.ai_findings_count || 0), 0) || 0
 
           return (
             <Card
@@ -587,6 +570,14 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                         <Badge className="bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20 border font-medium">
                           <Shield className="w-3 h-3 mr-1" />
                           Mandatory
+                        </Badge>
+                      )}
+
+                      {/* AI Findings Badge */}
+                      {totalAIFindings > 0 && (
+                        <Badge className="bg-[#F97316]/10 text-[#F97316] border-[#F97316]/20 border font-medium">
+                          <Bot className="w-3 h-3 mr-1" />
+                          {totalAIFindings} AI Finding{totalAIFindings !== 1 ? "s" : ""}
                         </Badge>
                       )}
 
@@ -653,6 +644,18 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                       <FolderOpen className="w-4 h-4 mr-2" />
                       Select Documents
                     </Button>
+
+                    {/* AI Findings Button */}
+                    {totalAIFindings > 0 && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowAIFindings(isShowingAIFindings ? null : requirement.id)}
+                        className="border-[#F97316]/20 text-[#F97316] hover:bg-[#F97316]/10 transition-all duration-200"
+                      >
+                        <Bot className="w-4 h-4 mr-2" />
+                        AI Findings ({totalAIFindings})
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -705,6 +708,28 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                   </div>
                 )}
 
+                {/* AI Findings Panel */}
+                {isShowingAIFindings && (
+                  <div className="border border-[#F97316]/20 rounded-xl p-6 bg-gradient-to-r from-[#F97316]/5 to-white">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-[#1E293B] flex items-center gap-2">
+                        <Bot className="w-5 h-5 text-[#F97316]" />
+                        AI-Generated Findings
+                      </h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAIFindings(null)}
+                        className="hover:bg-[#F1F5F9]"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    <AIFindingsPanel auditId={auditId} onFindingSelect={(finding) => setSelectedAIFinding(finding)} />
+                  </div>
+                )}
+
                 {/* Enhanced Submissions Display */}
                 {hasSubmissions && (
                   <div className="space-y-4">
@@ -730,6 +755,13 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                                 {submission.revision_round > 1 && (
                                   <span className="px-2 py-1 bg-[#F97316]/10 text-[#F97316] rounded-full text-xs font-medium">
                                     Revision {submission.revision_round}
+                                  </span>
+                                )}
+                                {submission.ai_findings_count > 0 && (
+                                  <span className="px-2 py-1 bg-[#F97316]/10 text-[#F97316] rounded-full text-xs font-medium flex items-center gap-1">
+                                    <Bot className="w-3 h-3" />
+                                    {submission.ai_findings_count} AI Finding
+                                    {submission.ai_findings_count !== 1 ? "s" : ""}
                                   </span>
                                 )}
                               </div>
@@ -778,6 +810,17 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                                 <History className="w-4 h-4 mr-1" />
                                 History
                               </Button>
+                              {submission.ai_findings_count > 0 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowAIFindings(requirement.id)}
+                                  className="border-[#F97316]/20 text-[#F97316] hover:bg-[#F97316]/10 transition-all duration-200"
+                                >
+                                  <Bot className="w-4 h-4 mr-1" />
+                                  AI Findings
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1221,7 +1264,7 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                 </TabsList>
 
                 <TabsContent value="workflow" className="space-y-4 mt-6">
-                  {selectedSubmission.workflow_history.map((entry, index) => (
+                  {selectedSubmission.workflow_history.map((entry: any, index: number) => (
                     <div
                       key={index}
                       className="flex items-start gap-4 p-6 border border-[#E2E8F0] rounded-xl bg-gradient-to-r from-white to-[#F8FAFC]"
@@ -1269,7 +1312,7 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                 </TabsContent>
 
                 <TabsContent value="ai-validation" className="space-y-4 mt-6">
-                  {selectedSubmission.ai_validations.map((validation, index) => (
+                  {selectedSubmission.ai_validations.map((validation: any, index: number) => (
                     <div
                       key={index}
                       className="p-6 border border-[#E2E8F0] rounded-xl bg-gradient-to-r from-white to-[#F8FAFC]"
@@ -1298,7 +1341,7 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                             Issues Found:
                           </h5>
                           <ul className="space-y-2">
-                            {validation.issues_found.map((issue, i) => (
+                            {validation.issues_found.map((issue: string, i: number) => (
                               <li key={i} className="flex items-start gap-2 text-sm">
                                 <div className="w-1.5 h-1.5 bg-[#DC2626] rounded-full mt-2 flex-shrink-0"></div>
                                 <span className="text-[#1E293B]">{issue}</span>
@@ -1315,7 +1358,7 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                             Recommendations:
                           </h5>
                           <ul className="space-y-2">
-                            {validation.recommendations.map((rec, i) => (
+                            {validation.recommendations.map((rec: string, i: number) => (
                               <li key={i} className="flex items-start gap-2 text-sm">
                                 <div className="w-1.5 h-1.5 bg-[#3B82F6] rounded-full mt-2 flex-shrink-0"></div>
                                 <span className="text-[#1E293B]">{rec}</span>
@@ -1334,7 +1377,7 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                 </TabsContent>
 
                 <TabsContent value="audit-trail" className="space-y-3 mt-6">
-                  {selectedSubmission.audit_trail.map((entry, index) => (
+                  {selectedSubmission.audit_trail.map((entry: any, index: number) => (
                     <div
                       key={index}
                       className="flex items-center gap-4 p-4 border-l-4 border-[#3B82F6] bg-gradient-to-r from-[#3B82F6]/5 to-white rounded-r-xl"
@@ -1356,7 +1399,7 @@ const DocumentSubmissionCenter: React.FC<DocumentSubmissionCenterProps> = ({ aud
                 </TabsContent>
 
                 <TabsContent value="verification" className="space-y-4 mt-6">
-                  {selectedSubmission.verification_chain.map((block, index) => (
+                  {selectedSubmission.verification_chain.map((block: any, index: number) => (
                     <div
                       key={index}
                       className="p-6 border border-[#E2E8F0] rounded-xl bg-gradient-to-r from-[#059669]/5 to-white"
